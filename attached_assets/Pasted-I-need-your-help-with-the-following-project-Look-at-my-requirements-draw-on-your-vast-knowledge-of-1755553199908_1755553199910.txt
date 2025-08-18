@@ -1,0 +1,37 @@
+I need your help with the following project. Look at my requirements, draw on your vast knowledge of coding and come up with the best strategy you can to implement this application in a way that helps me get this running quickly but that allows me to adapt this project in the future.
+
+## Primary Goal
+Create a website that allows the user to enter a montana property geocode. The website will extract the physical address associated with the geocode, display the address and map it on an interactive webmap.  
+
+## Type of Application
+Web App
+
+## Accessibility Considerations
+Ensure the application adheres to accessibility best practices (WCAG AA level recommended).
+- Use semantic HTML elements correctly (e.g., <nav>, <main>, <button>, <article>).
+- Implement proper ARIA attributes where necessary to enhance screen reader compatibility, especially for dynamic content and custom components.
+- Ensure all interactive elements are fully navigable and operable using only the keyboard.
+- Maintain sufficient color contrast between text and background elements.
+- Provide text alternatives (alt text) for all meaningful images.
+- Test the application using screen readers (e.g., VoiceOver, NVDA) and keyboard navigation.
+
+## User Registration
+This application will not require user registration.
+
+## Monetization Plan
+This application currently has no specific monetization plans.
+
+## Data Storage Requirements
+No data storage is required for this application.
+## External Data Sources
+Please analyze this data source and suggest the best way to integrate it
+     into the application. If needed add API calls to this data source.
+The address associated with the geocode will be extracted from this web address: https://svc.mt.gov/msl/cadastral/?page=PropertyDetails&geocode=
+By pasting the geocode at the end of this URL, the information for the specific geocode comes up. I have already written a python script that can webscrape the information if that is helpful.
+
+## Development Environment
+using React/Next.js with various backend options
+
+## Visual Theme
+This should be a simple, clean, minimal, one page website., Minimalist, Dark Mode
+
