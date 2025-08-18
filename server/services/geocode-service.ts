@@ -16,12 +16,20 @@ export class GeocodeService {
   constructor() {
     // Handle __dirname in ES modules
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
-    this.pythonScriptPath = path.join(currentDir, '../scripts/property_lookup.py');
+    // Use simpler script as fallback for environments without full Playwright support
+    this.pythonScriptPath = path.join(currentDir, '../scripts/simple_property_lookup.py');
   }
 
   async getPropertyInfo(geocode: string): Promise<PropertyInfo> {
     return new Promise((resolve, reject) => {
-      const pythonProcess = spawn('python3', [this.pythonScriptPath, geocode]);
+      // Use the virtual environment python from uv
+      const pythonPath = '/home/runner/workspace/.pythonlibs/bin/python';
+      const pythonProcess = spawn(pythonPath, [this.pythonScriptPath, geocode], {
+        env: {
+          ...process.env,
+          PLAYWRIGHT_BROWSERS_PATH: '/home/runner/workspace/.cache/ms-playwright'
+        }
+      });
       
       let stdout = '';
       let stderr = '';
