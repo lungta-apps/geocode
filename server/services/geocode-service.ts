@@ -42,7 +42,7 @@ export class GeocodeService {
         stderr += data.toString();
       });
 
-      pythonProcess.on('close', (code) => {
+      pythonProcess.on('close', async (code) => {
         if (code !== 0) {
           reject(new Error(`Python script failed with code ${code}: ${stderr}`));
           return;
@@ -61,8 +61,8 @@ export class GeocodeService {
             return;
           }
 
-          // Extract coordinates from address if possible (basic geocoding)
-          const coordinates = this.extractCoordinatesFromAddress(result.address);
+          // Extract coordinates from address using geocoding service
+          const coordinates = await this.extractCoordinatesFromAddress(result.address);
           
           const propertyInfo: PropertyInfo = {
             geocode: result.geocode || geocode,
@@ -120,8 +120,44 @@ export class GeocodeService {
     return undefined;
   }
 
-  private extractCoordinatesFromAddress(address: string): { lat: number; lng: number } | null {
-    // Basic geocoding for major Montana cities - in a real app, you'd use a geocoding service
+  private async extractCoordinatesFromAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+      // Use OpenStreetMap's Nominatim API for free geocoding
+      const encodedAddress = encodeURIComponent(address);
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=us`;
+      
+      const response = await fetch(nominatimUrl, {
+        headers: {
+          'User-Agent': 'Montana Property Lookup App (contact: user@example.com)'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Geocoding API returned ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const result = data[0];
+        return {
+          lat: parseFloat(result.lat),
+          lng: parseFloat(result.lon)
+        };
+      }
+      
+      // Fallback to city-level coordinates if exact address not found
+      return this.getCityCoordinates(address);
+      
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      // Fallback to city-level coordinates
+      return this.getCityCoordinates(address);
+    }
+  }
+
+  private getCityCoordinates(address: string): { lat: number; lng: number } | null {
+    // Fallback city-level coordinates for Montana cities
     const cityCoords: { [key: string]: { lat: number; lng: number } } = {
       'helena': { lat: 46.5967, lng: -112.0362 },
       'billings': { lat: 45.7833, lng: -108.5007 },
