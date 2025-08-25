@@ -32,73 +32,88 @@ export class GeocodeService {
     return new Promise((resolve, reject) => {
       // Handle different paths for development vs deployment
       const isDeployment = process.env.REPLIT_DEPLOYMENT === '1';
-      const pythonPath = isDeployment 
-        ? '/home/runner/.pythonlibs/bin/python'
-        : '/home/runner/workspace/.pythonlibs/bin/python';
+      
+      // Try multiple Python paths in order of preference
+      const pythonPaths = isDeployment 
+        ? ['python3', '/usr/bin/python3', '/usr/local/bin/python3', 'python']
+        : ['/home/runner/workspace/.pythonlibs/bin/python', 'python3', '/usr/bin/python3'];
       
       const playwrightPath = isDeployment
         ? '/home/runner/.cache/ms-playwright'
         : '/home/runner/workspace/.cache/ms-playwright';
       
-      const pythonProcess = spawn(pythonPath, [this.pythonScriptPath, geocode], {
-        env: {
-          ...process.env,
-          PLAYWRIGHT_BROWSERS_PATH: playwrightPath
-        }
-      });
+      // Try each Python path until one works
+      this.tryPythonPaths(pythonPaths, this.pythonScriptPath, geocode, playwrightPath, resolve, reject);
+    });
+  }
+
+  private tryPythonPaths(pythonPaths: string[], scriptPath: string, geocode: string, playwrightPath: string, resolve: any, reject: any, index: number = 0): void {
+    if (index >= pythonPaths.length) {
+      reject(new Error('No working Python executable found'));
+      return;
+    }
+
+    const pythonPath = pythonPaths[index];
+    const pythonProcess = spawn(pythonPath, [scriptPath, geocode], {
+      env: {
+        ...process.env,
+        PLAYWRIGHT_BROWSERS_PATH: playwrightPath
+      }
+    });
       
-      let stdout = '';
-      let stderr = '';
+    let stdout = '';
+    let stderr = '';
 
-      pythonProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
+    pythonProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
 
-      pythonProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
+    pythonProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
 
-      pythonProcess.on('close', async (code) => {
-        if (code !== 0) {
-          reject(new Error(`Python script failed with code ${code}: ${stderr}`));
+    pythonProcess.on('close', async (code) => {
+      if (code !== 0) {
+        // Try next Python path if this one failed
+        this.tryPythonPaths(pythonPaths, scriptPath, geocode, playwrightPath, resolve, reject, index + 1);
+        return;
+      }
+
+      try {
+        const result: PythonResult = JSON.parse(stdout);
+        
+        if (!result.success) {
+          reject(new Error(result.error || 'Failed to fetch property information'));
           return;
         }
 
-        try {
-          const result: PythonResult = JSON.parse(stdout);
-          
-          if (!result.success) {
-            reject(new Error(result.error || 'Failed to fetch property information'));
-            return;
-          }
-
-          if (!result.address) {
-            reject(new Error('No address found in response'));
-            return;
-          }
-
-          // Extract coordinates from address using geocoding service
-          const coordinates = await this.extractCoordinatesFromAddress(result.address);
-          
-          const propertyInfo: PropertyInfo = {
-            geocode: result.geocode || geocode,
-            address: result.address,
-            county: this.extractCountyFromAddress(result.address),
-            coordinates: coordinates ? `${coordinates.lat}°N, ${Math.abs(coordinates.lng)}°W` : undefined,
-            legalDescription: undefined, // Would need additional scraping
-            lat: coordinates?.lat,
-            lng: coordinates?.lng
-          };
-
-          resolve(propertyInfo);
-        } catch (error) {
-          reject(new Error(`Failed to parse Python script output: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        if (!result.address) {
+          reject(new Error('No address found in response'));
+          return;
         }
-      });
 
-      pythonProcess.on('error', (error) => {
-        reject(new Error(`Failed to start Python script: ${error.message}`));
-      });
+        // Extract coordinates from address using geocoding service
+        const coordinates = await this.extractCoordinatesFromAddress(result.address);
+        
+        const propertyInfo: PropertyInfo = {
+          geocode: result.geocode || geocode,
+          address: result.address,
+          county: this.extractCountyFromAddress(result.address),
+          coordinates: coordinates ? `${coordinates.lat}°N, ${Math.abs(coordinates.lng)}°W` : undefined,
+          legalDescription: undefined, // Would need additional scraping
+          lat: coordinates?.lat,
+          lng: coordinates?.lng
+        };
+
+        resolve(propertyInfo);
+      } catch (error) {
+        reject(new Error(`Failed to parse Python script output: ${error instanceof Error ? error.message : 'Unknown error'}`));
+      }
+    });
+
+    pythonProcess.on('error', (error) => {
+      // Try next Python path if this one can't be found
+      this.tryPythonPaths(pythonPaths, scriptPath, geocode, playwrightPath, resolve, reject, index + 1);
     });
   }
 
