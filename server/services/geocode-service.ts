@@ -14,22 +14,36 @@ export class GeocodeService {
   private pythonScriptPath: string;
 
   constructor() {
-    // Handle __dirname in ES modules and find project root
-    const currentDir = path.dirname(fileURLToPath(import.meta.url));
-    // Navigate to project root from server/services/ directory
-    const projectRoot = path.resolve(currentDir, '../../');
-    // Use original Playwright script for reliable data extraction
-    this.pythonScriptPath = path.join(projectRoot, 'server/scripts/property_lookup.py');
+    // Handle different directory structures in development vs deployment
+    const isDeployment = process.env.REPLIT_DEPLOYMENT === '1';
+    
+    if (isDeployment) {
+      // In deployment, the project structure is at /home/runner/
+      this.pythonScriptPath = '/home/runner/server/scripts/property_lookup.py';
+    } else {
+      // In development, use relative path resolution
+      const currentDir = path.dirname(fileURLToPath(import.meta.url));
+      const projectRoot = path.resolve(currentDir, '../../');
+      this.pythonScriptPath = path.join(projectRoot, 'server/scripts/property_lookup.py');
+    }
   }
 
   async getPropertyInfo(geocode: string): Promise<PropertyInfo> {
     return new Promise((resolve, reject) => {
-      // Use the virtual environment python from uv
-      const pythonPath = '/home/runner/workspace/.pythonlibs/bin/python';
+      // Handle different paths for development vs deployment
+      const isDeployment = process.env.REPLIT_DEPLOYMENT === '1';
+      const pythonPath = isDeployment 
+        ? '/home/runner/.pythonlibs/bin/python'
+        : '/home/runner/workspace/.pythonlibs/bin/python';
+      
+      const playwrightPath = isDeployment
+        ? '/home/runner/.cache/ms-playwright'
+        : '/home/runner/workspace/.cache/ms-playwright';
+      
       const pythonProcess = spawn(pythonPath, [this.pythonScriptPath, geocode], {
         env: {
           ...process.env,
-          PLAYWRIGHT_BROWSERS_PATH: '/home/runner/workspace/.cache/ms-playwright'
+          PLAYWRIGHT_BROWSERS_PATH: playwrightPath
         }
       });
       
