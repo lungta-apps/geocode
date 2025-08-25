@@ -18,10 +18,10 @@ export class GeocodeService {
     const isDeployment = process.env.REPLIT_DEPLOYMENT === '1';
     
     if (isDeployment) {
-      // In deployment, the project structure is at /home/runner/
-      this.pythonScriptPath = '/home/runner/server/scripts/property_lookup.py';
+      // In deployment, use simpler script that works with basic Python
+      this.pythonScriptPath = '/home/runner/server/scripts/simple_property_lookup.py';
     } else {
-      // In development, use relative path resolution
+      // In development, use relative path resolution with Playwright script
       const currentDir = path.dirname(fileURLToPath(import.meta.url));
       const projectRoot = path.resolve(currentDir, '../../');
       this.pythonScriptPath = path.join(projectRoot, 'server/scripts/property_lookup.py');
@@ -35,7 +35,7 @@ export class GeocodeService {
       
       // Try multiple Python paths in order of preference
       const pythonPaths = isDeployment 
-        ? ['python3', '/usr/bin/python3', '/usr/local/bin/python3', 'python']
+        ? ['python3', 'python', '/usr/bin/python3', '/usr/local/bin/python3', '/usr/bin/python']
         : ['/home/runner/workspace/.pythonlibs/bin/python', 'python3', '/usr/bin/python3'];
       
       const playwrightPath = isDeployment
