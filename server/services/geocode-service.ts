@@ -14,8 +14,8 @@ export class GeocodeService {
   private pythonScriptPath: string;
 
   constructor() {
-    // Use diagnostic script for troubleshooting deployment issues
-    this.pythonScriptPath = path.join(process.cwd(), 'server', 'scripts', 'diagnostic_lookup.py');
+    // Use simple requests-based script for better deployment reliability
+    this.pythonScriptPath = path.join(process.cwd(), 'server', 'scripts', 'simple_property_lookup.py');
   }
 
   async getPropertyInfo(geocode: string): Promise<PropertyInfo> {
