@@ -14,10 +14,8 @@ export class GeocodeService {
   private pythonScriptPath: string;
 
   constructor() {
-    // Handle __dirname in ES modules
-    const currentDir = path.dirname(fileURLToPath(import.meta.url));
-    // Use original Playwright script for reliable data extraction
-    this.pythonScriptPath = path.join(currentDir, '../scripts/property_lookup.py');
+    // Use absolute path from project root to ensure it works in both dev and production
+    this.pythonScriptPath = path.join(process.cwd(), 'server', 'scripts', 'property_lookup.py');
   }
 
   async getPropertyInfo(geocode: string): Promise<PropertyInfo> {
