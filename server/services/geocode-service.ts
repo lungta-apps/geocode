@@ -74,24 +74,12 @@ export class GeocodeService {
         const result: PythonResult = JSON.parse(stdout);
         
         if (!result.success) {
-          // If this is the last Python path to try, provide a helpful error message
-          if (index >= pythonPaths.length - 1) {
-            reject(new Error(`Property lookup failed: ${result.error || 'The property may not exist or the website structure has changed. Please verify the geocode is correct.'}`));
-          } else {
-            // Try next Python path
-            this.tryPythonPaths(pythonPaths, scriptPath, geocode, playwrightPath, resolve, reject, index + 1);
-          }
+          reject(new Error(`Property lookup failed: ${result.error || 'The property may not exist or the website structure has changed. Please verify the geocode is correct.'}`));
           return;
         }
 
         if (!result.address) {
-          // If this is the last Python path to try, provide a helpful error message
-          if (index >= pythonPaths.length - 1) {
-            reject(new Error('Property not found: No address information was available for this geocode. Please verify the geocode is correct.'));
-          } else {
-            // Try next Python path
-            this.tryPythonPaths(pythonPaths, scriptPath, geocode, playwrightPath, resolve, reject, index + 1);
-          }
+          reject(new Error('Property not found: No address information was available for this geocode. Please verify the geocode is correct.'));
           return;
         }
 
@@ -110,13 +98,7 @@ export class GeocodeService {
 
         resolve(propertyInfo);
       } catch (error) {
-        // If this is the last Python path to try, provide a helpful error message
-        if (index >= pythonPaths.length - 1) {
-          reject(new Error(`Unable to process property lookup: ${error instanceof Error ? error.message : 'Unknown error'}. Please contact support if this issue persists.`));
-        } else {
-          // Try next Python path
-          this.tryPythonPaths(pythonPaths, scriptPath, geocode, playwrightPath, resolve, reject, index + 1);
-        }
+        reject(new Error(`Unable to process property lookup: ${error instanceof Error ? error.message : 'Unknown error'}. Please contact support if this issue persists.`));
       }
     });
 
