@@ -5,6 +5,8 @@ from playwright.sync_api import sync_playwright, TimeoutError as PWTimeoutError
 import re
 import sys
 import json
+import subprocess
+import os
 
 BASE_URL = "https://svc.mt.gov/msl/cadastral/?page=PropertyDetails&geocode="
 
@@ -18,7 +20,30 @@ ADDRESS_XPATHS = [
 ]
 
 
+def install_browsers_if_needed():
+    """Install Playwright browsers if they're not available."""
+    try:
+        # Try to check if chromium is available
+        with sync_playwright() as p:
+            p.chromium.launch(headless=True).close()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e) or "download new browsers" in str(e):
+            print("Installing Playwright browsers...", file=sys.stderr)
+            try:
+                # Install browsers using subprocess
+                subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], 
+                             check=True, capture_output=True, text=True)
+                print("Playwright browsers installed successfully.", file=sys.stderr)
+            except subprocess.CalledProcessError as install_error:
+                print(f"Failed to install browsers: {install_error}", file=sys.stderr)
+                raise e
+        else:
+            raise e
+
 def get_property_address(geocode: str) -> dict:
+    # Ensure browsers are installed before proceeding
+    install_browsers_if_needed()
+    
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
