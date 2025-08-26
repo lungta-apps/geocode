@@ -14,8 +14,8 @@ export class GeocodeService {
   private pythonScriptPath: string;
 
   constructor() {
-    // Use absolute path from project root to ensure it works in both dev and production
-    this.pythonScriptPath = path.join(process.cwd(), 'server', 'scripts', 'property_lookup.py');
+    // Use diagnostic script for troubleshooting deployment issues
+    this.pythonScriptPath = path.join(process.cwd(), 'server', 'scripts', 'diagnostic_lookup.py');
   }
 
   async getPropertyInfo(geocode: string): Promise<PropertyInfo> {
