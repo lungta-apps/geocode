@@ -14,33 +14,24 @@ export class GeocodeService {
   private pythonScriptPath: string;
 
   constructor() {
-    // Handle different directory structures in development vs deployment
-    const isDeployment = process.env.REPLIT_DEPLOYMENT === '1';
-    
-    if (isDeployment) {
-      // In deployment, use simpler script that works with basic Python
-      this.pythonScriptPath = '/home/runner/server/scripts/simple_property_lookup.py';
-    } else {
-      // In development, use relative path resolution with Playwright script
-      const currentDir = path.dirname(fileURLToPath(import.meta.url));
-      const projectRoot = path.resolve(currentDir, '../../');
-      this.pythonScriptPath = path.join(projectRoot, 'server/scripts/property_lookup.py');
-    }
+    // Always start with the relative path resolution for the simple script
+    // as it's more reliable in various environments
+    const currentDir = path.dirname(fileURLToPath(import.meta.url));
+    const projectRoot = path.resolve(currentDir, '../../');
+    this.pythonScriptPath = path.join(projectRoot, 'server/scripts/simple_property_lookup.py');
   }
 
   async getPropertyInfo(geocode: string): Promise<PropertyInfo> {
     return new Promise((resolve, reject) => {
-      // Handle different paths for development vs deployment
-      const isDeployment = process.env.REPLIT_DEPLOYMENT === '1';
+      // Use more robust Python path detection
+      const pythonPaths = [
+        '/home/runner/workspace/.pythonlibs/bin/python',
+        'python3',
+        '/nix/store/7hnr99nxrd2aw6lghybqdmkckq60j6l9-python3-3.11.9/bin/python3',
+        '/usr/bin/python3'
+      ];
       
-      // Try multiple Python paths in order of preference
-      const pythonPaths = isDeployment 
-        ? ['python3', 'python', '/usr/bin/python3', '/usr/local/bin/python3', '/usr/bin/python']
-        : ['/home/runner/workspace/.pythonlibs/bin/python', 'python3', '/usr/bin/python3'];
-      
-      const playwrightPath = isDeployment
-        ? '/home/runner/.cache/ms-playwright'
-        : '/home/runner/workspace/.cache/ms-playwright';
+      const playwrightPath = '/home/runner/workspace/.cache/ms-playwright';
       
       // Try each Python path until one works
       this.tryPythonPaths(pythonPaths, this.pythonScriptPath, geocode, playwrightPath, resolve, reject);
@@ -83,12 +74,24 @@ export class GeocodeService {
         const result: PythonResult = JSON.parse(stdout);
         
         if (!result.success) {
-          reject(new Error(result.error || 'Failed to fetch property information'));
+          // If this is the last Python path to try, provide a helpful error message
+          if (index >= pythonPaths.length - 1) {
+            reject(new Error(`Property lookup failed: ${result.error || 'The property may not exist or the website structure has changed. Please verify the geocode is correct.'}`));
+          } else {
+            // Try next Python path
+            this.tryPythonPaths(pythonPaths, scriptPath, geocode, playwrightPath, resolve, reject, index + 1);
+          }
           return;
         }
 
         if (!result.address) {
-          reject(new Error('No address found in response'));
+          // If this is the last Python path to try, provide a helpful error message
+          if (index >= pythonPaths.length - 1) {
+            reject(new Error('Property not found: No address information was available for this geocode. Please verify the geocode is correct.'));
+          } else {
+            // Try next Python path
+            this.tryPythonPaths(pythonPaths, scriptPath, geocode, playwrightPath, resolve, reject, index + 1);
+          }
           return;
         }
 
@@ -107,7 +110,13 @@ export class GeocodeService {
 
         resolve(propertyInfo);
       } catch (error) {
-        reject(new Error(`Failed to parse Python script output: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        // If this is the last Python path to try, provide a helpful error message
+        if (index >= pythonPaths.length - 1) {
+          reject(new Error(`Unable to process property lookup: ${error instanceof Error ? error.message : 'Unknown error'}. Please contact support if this issue persists.`));
+        } else {
+          // Try next Python path
+          this.tryPythonPaths(pythonPaths, scriptPath, geocode, playwrightPath, resolve, reject, index + 1);
+        }
       }
     });
 
