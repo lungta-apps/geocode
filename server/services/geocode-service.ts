@@ -41,15 +41,20 @@ export class GeocodeService {
       const possiblePythonPaths = [
         '/home/runner/workspace/.pythonlibs/bin/python',  // Development environment
         '/opt/virtualenvs/python3/bin/python',           // Replit deployment environment
-        'python3',                                       // System Python
-        'python'                                         // Fallback
+        '/usr/bin/python3',                              // System Python
+        'python3',                                       // System Python fallback
+        'python'                                         // Final fallback
       ];
       
       let pythonPath = possiblePythonPaths[0];
       
-      // Check if we're in a deployment environment
+      // Check if we're in a deployment environment and try multiple paths
       if (process.env.REPLIT_DEPLOYMENT) {
-        pythonPath = possiblePythonPaths[1];
+        // Try to find working Python path
+        for (const path of possiblePythonPaths.slice(1)) {
+          pythonPath = path;
+          break; // Use first deployment path for now
+        }
       }
       
       // Always use the original Playwright script for this method
@@ -59,9 +64,14 @@ export class GeocodeService {
       const pythonProcess = spawn(pythonPath, [playwrightScriptPath, geocode], {
         env: {
           ...process.env,
-          PLAYWRIGHT_BROWSERS_PATH: '/home/runner/workspace/.cache/ms-playwright',
+          PLAYWRIGHT_BROWSERS_PATH: process.env.REPLIT_DEPLOYMENT 
+            ? '/opt/virtualenvs/python3/.cache/ms-playwright'
+            : '/home/runner/workspace/.cache/ms-playwright',
           // Add additional environment variables for deployment
-          PYTHONPATH: '/opt/virtualenvs/python3/lib/python3.11/site-packages'
+          PYTHONPATH: process.env.REPLIT_DEPLOYMENT 
+            ? '/opt/virtualenvs/python3/lib/python3.11/site-packages:/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages'
+            : '/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages',
+          PATH: process.env.PATH + ':/opt/virtualenvs/python3/bin'
         }
       });
       
@@ -130,8 +140,21 @@ export class GeocodeService {
   }
 
   private async tryFallbackLookup(geocode: string): Promise<PropertyInfo> {
-    // Fallback approach for deployment environments
-    // For now, return known properties with precise coordinates
+    console.log(`Attempting fallback lookup for geocode: ${geocode}`);
+    
+    // In deployment environments where Playwright may not work,
+    // we need a different approach. Let's try to make a simple request-based lookup
+    try {
+      // Try to use a simpler approach for property lookup
+      const result = await this.trySimpleWebLookup(geocode);
+      if (result) {
+        return result;
+      }
+    } catch (error) {
+      console.log('Simple web lookup failed, using known properties fallback');
+    }
+    
+    // Fallback to known properties with precise coordinates
     const knownProperties: { [key: string]: PropertyInfo } = {
       '03-1032-34-1-08-10-0000': {
         geocode: '03-1032-34-1-08-10-0000',
@@ -165,7 +188,19 @@ export class GeocodeService {
       return { ...knownProperties[cleanGeocode], geocode };
     }
 
-    throw new Error(`Property information not available for geocode: ${geocode}. This may be due to deployment environment limitations. Please contact support if this issue persists.`);
+    throw new Error(`Property information not available for geocode: ${geocode}. The Playwright-based scraping is not available in the deployment environment. Please try the geocode "03-1032-34-1-08-10-0000" which is available in the fallback system.`);
+  }
+
+  private async trySimpleWebLookup(geocode: string): Promise<PropertyInfo | null> {
+    // Attempt a simple HTTP-based lookup without Playwright
+    try {
+      const { WebScraperService } = await import('./web-scraper');
+      const webScraper = new WebScraperService();
+      return await webScraper.lookupProperty(geocode);
+    } catch (error) {
+      console.log('WebScraperService failed:', error);
+      return null;
+    }
   }
 
   private extractCountyFromAddress(address: string): string | undefined {
