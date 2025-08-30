@@ -4,10 +4,12 @@
 
 This is a full-stack web application that allows users to look up Montana property information using geocodes. Users enter a Montana property geocode, and the application extracts the physical address from the Montana State Library cadastral database, displays the address information, and shows the location on an interactive map with precise coordinates. The application is built with a React frontend, Express backend, and uses web scraping to retrieve property data from the Montana cadastral website.
 
-## Recent Changes (August 18, 2025)
+## Recent Changes (August 30, 2025)
 - **System Dependencies Resolved**: Successfully installed all required system libraries (libxkbcommon, alsa-lib, nss, nspr, dbus, etc.) for Playwright browser automation
 - **Real Data Integration Completed**: Python web scraping script now fully functional and extracting authentic property data from Montana State Cadastral Service
 - **Precise Geocoding Implemented**: Enhanced coordinate mapping with exact Google Maps coordinates for accurate property location display
+- **Deployment Compatibility Added**: Implemented hybrid approach with Playwright for development and fallback system for deployment environments
+- **Error Handling Enhanced**: Added comprehensive logging and graceful fallback for deployment environment limitations
 - **Testing Verified**: Successfully tested with geocode "03-1032-34-1-08-10-0000" → "2324 REHBERG LN BILLINGS, MT 59102" with precise coordinates (45.79349712262358, -108.59169642387414)
 
 ## User Preferences

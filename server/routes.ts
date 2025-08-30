@@ -37,6 +37,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint for deployment troubleshooting
+  app.get("/api/debug/environment", (req, res) => {
+    res.json({
+      nodeVersion: process.version,
+      environment: process.env.NODE_ENV || 'development',
+      isDeployment: !!process.env.REPLIT_DEPLOYMENT,
+      platform: process.platform,
+      cwd: process.cwd(),
+      timestamp: new Date().toISOString()
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
