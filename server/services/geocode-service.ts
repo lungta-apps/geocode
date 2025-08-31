@@ -21,7 +21,8 @@ export class GeocodeService {
       throw new Error('No address found in response');
     }
 
-    // Extract coordinates from address using geocoding service
+    // Use Nominatim to get precise coordinates from the Montana address
+    console.log(`Geocoding Montana address: ${result.address}`);
     const coordinates = await this.extractCoordinatesFromAddress(result.address);
     
     const propertyInfo: PropertyInfo = {
@@ -121,37 +122,126 @@ export class GeocodeService {
   }
 
   private async tryMultipleGeocodingServices(address: string): Promise<{ lat: number; lng: number } | null> {
-    // First try: Nominatim with building-level precision
+    // Enhanced Nominatim geocoding specifically for Montana addresses
     try {
-      const encodedAddress = encodeURIComponent(address);
-      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=3&countrycodes=us&addressdetails=1&extratags=1`;
+      // Clean and enhance the address for better Nominatim results
+      const enhancedAddress = this.enhanceAddressForGeocoding(address);
+      const encodedAddress = encodeURIComponent(enhancedAddress);
+      
+      // Use Nominatim search API with Montana-specific parameters
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?` +
+        `format=json&` +
+        `q=${encodedAddress}&` +
+        `limit=5&` +
+        `countrycodes=us&` +
+        `state=montana&` +
+        `addressdetails=1&` +
+        `extratags=1&` +
+        `dedupe=1`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
       const response = await fetch(nominatimUrl, {
         headers: {
-          'User-Agent': 'Montana Property Lookup App (contact: user@example.com)'
-        }
+          'User-Agent': 'Montana Property Lookup App (Educational/Non-commercial)',
+          'Accept': 'application/json'
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
         
         if (data && data.length > 0) {
-          // Look for the most precise result (building or house number level)
-          const preciseResult = data.find((result: any) => 
-            result.class === 'place' && (result.type === 'house' || result.type === 'building')
-          ) || data[0];
+          // Score results by precision and relevance for Montana addresses
+          const scoredResults = data.map((result: any) => ({
+            ...result,
+            score: this.scoreMontanaGeocodingResult(result, address)
+          })).sort((a: any, b: any) => b.score - a.score);
           
-          return {
-            lat: parseFloat(preciseResult.lat),
-            lng: parseFloat(preciseResult.lon)
-          };
+          const bestResult = scoredResults[0];
+          
+          // Additional validation for Montana coordinates
+          const lat = parseFloat(bestResult.lat);
+          const lng = parseFloat(bestResult.lon);
+          
+          if (this.isValidMontanaCoordinate(lat, lng)) {
+            console.log(`Nominatim geocoding success: ${address} → (${lat}, ${lng})`);
+            return { lat, lng };
+          }
         }
       }
     } catch (error) {
-      console.warn('Nominatim geocoding failed:', error);
+      console.warn('Enhanced Nominatim geocoding failed:', error);
     }
 
     return null;
+  }
+
+  private enhanceAddressForGeocoding(address: string): string {
+    // Clean and format address for better Nominatim matching
+    let enhanced = address.trim();
+    
+    // Ensure "Montana" or "MT" is included for better state matching
+    if (!enhanced.includes('Montana') && !enhanced.includes('MT')) {
+      enhanced += ', Montana';
+    }
+    
+    // Replace common abbreviations that might confuse geocoding
+    enhanced = enhanced
+      .replace(/\bLN\b/gi, 'Lane')
+      .replace(/\bST\b/gi, 'Street')
+      .replace(/\bAVE\b/gi, 'Avenue')
+      .replace(/\bDR\b/gi, 'Drive')
+      .replace(/\bRD\b/gi, 'Road')
+      .replace(/\bBLVD\b/gi, 'Boulevard')
+      .replace(/\bCT\b/gi, 'Court')
+      .replace(/\bPL\b/gi, 'Place');
+    
+    return enhanced;
+  }
+
+  private scoreMontanaGeocodingResult(result: any, originalAddress: string): number {
+    let score = 0;
+    
+    // Prefer results with higher place_rank (more specific)
+    if (result.place_rank) {
+      score += (30 - result.place_rank) * 2; // Higher rank = more specific
+    }
+    
+    // Prefer results that match the address type
+    if (result.class === 'place' && ['house', 'building', 'plot'].includes(result.type)) {
+      score += 15;
+    }
+    
+    // Prefer results in Montana
+    if (result.address && result.address.state && 
+        (result.address.state.toLowerCase().includes('montana') || result.address.state === 'MT')) {
+      score += 10;
+    }
+    
+    // Prefer results with house numbers if original address has one
+    const hasHouseNumber = /^\d+/.test(originalAddress.trim());
+    if (hasHouseNumber && result.address && result.address.house_number) {
+      score += 8;
+    }
+    
+    // Prefer results with higher importance (OSM importance score)
+    if (result.importance) {
+      score += result.importance * 5;
+    }
+    
+    return score;
+  }
+
+  private isValidMontanaCoordinate(lat: number, lng: number): boolean {
+    // Montana approximate bounds: 
+    // Latitude: 44.3° to 49.0° N
+    // Longitude: -116.1° to -104.0° W
+    return lat >= 44.0 && lat <= 49.5 && lng >= -117.0 && lng <= -103.0;
   }
 
   private getCityCoordinates(address: string): { lat: number; lng: number } | null {
