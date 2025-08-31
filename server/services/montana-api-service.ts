@@ -113,6 +113,7 @@ export class MontanaApiService {
             if (this.looksLikeFullAddress(address)) {
               // Extract coordinates from geometry if available
               const coords = this.extractCoordinatesFromGeometry(feature.geometry, data.spatialReference);
+              console.log(`ArcGIS raw coordinates for ${address}:`, coords);
               return { 
                 success: true, 
                 address, 
@@ -220,13 +221,19 @@ export class MontanaApiService {
           const centroidX = sumX / ring.length;
           const centroidY = sumY / ring.length;
 
+          console.log(`Raw ArcGIS centroid: X=${centroidX}, Y=${centroidY}, spatialRef:`, spatialRef);
+
           // Convert from Web Mercator (EPSG:3857) to WGS84 (EPSG:4326) if needed
           if (spatialRef && (spatialRef.wkid === 102100 || spatialRef.latestWkid === 3857)) {
-            return this.convertWebMercatorToWGS84(centroidX, centroidY);
+            const converted = this.convertWebMercatorToWGS84(centroidX, centroidY);
+            console.log(`Converted to WGS84:`, converted);
+            return converted;
           }
           
           // If already in WGS84 or unknown, assume it's already lat/lng
-          return { lat: centroidY, lng: centroidX };
+          const coords = { lat: centroidY, lng: centroidX };
+          console.log(`Using as-is (assuming WGS84):`, coords);
+          return coords;
         }
       }
 
