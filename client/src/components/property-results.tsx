@@ -91,7 +91,7 @@ export function PropertyResults({ property, onCopyAddress, onOpenInMaps }: Prope
                     Coordinates
                   </h4>
                   <p className="text-sm text-on-surface-variant mt-1 font-mono" data-testid="text-coordinates">
-                    {property.coordinates}
+                    {property.coordinates} | Raw: {property.lat}, {property.lng}
                   </p>
                 </div>
               )}

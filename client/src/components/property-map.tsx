@@ -58,6 +58,9 @@ function ZoomControls() {
 
 export function PropertyMap({ lat, lng, address }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
+  
+  // Debug logging
+  console.log(`PropertyMap received coordinates: ${lat}, ${lng}`);
 
   // Custom marker icon for better visibility on dark theme
   const customIcon = L.divIcon({
