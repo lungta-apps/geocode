@@ -1,6 +1,12 @@
 // Montana cadastral property lookup using official ArcGIS REST API
 // This eliminates all Python dependencies for deployment compatibility
 
+interface ArcGISGeometry {
+  rings?: number[][][];
+  x?: number;
+  y?: number;
+}
+
 interface ArcGISResponse {
   features: Array<{
     attributes: {
@@ -11,14 +17,20 @@ interface ArcGISResponse {
       CountyName?: string;
       OwnerName?: string;
     };
-    geometry?: any;
+    geometry?: ArcGISGeometry;
   }>;
+  spatialReference?: {
+    wkid: number;
+    latestWkid?: number;
+  };
 }
 
 interface PropertyLookupResult {
   success: boolean;
   address?: string;
   geocode?: string;
+  lat?: number;
+  lng?: number;
   error?: string;
 }
 
@@ -99,7 +111,15 @@ export class MontanaApiService {
           if (addressParts.length > 0) {
             const address = addressParts.join(" ");
             if (this.looksLikeFullAddress(address)) {
-              return { success: true, address, geocode };
+              // Extract coordinates from geometry if available
+              const coords = this.extractCoordinatesFromGeometry(feature.geometry, data.spatialReference);
+              return { 
+                success: true, 
+                address, 
+                geocode,
+                lat: coords?.lat,
+                lng: coords?.lng
+              };
             }
           }
         }
@@ -181,6 +201,56 @@ export class MontanaApiService {
       success: false,
       error: `Property data not available for geocode ${geocode}. The service uses official Montana cadastral sources, but this property may not be available in the current database.`
     };
+  }
+
+  private extractCoordinatesFromGeometry(geometry: ArcGISGeometry | undefined, spatialRef: any): { lat: number; lng: number } | null {
+    if (!geometry) return null;
+
+    try {
+      // Handle polygon geometry (most common for parcels)
+      if (geometry.rings && geometry.rings.length > 0) {
+        // Calculate centroid of the polygon
+        const ring = geometry.rings[0]; // Use the outer ring
+        if (ring.length > 0) {
+          let sumX = 0, sumY = 0;
+          for (const point of ring) {
+            sumX += point[0];
+            sumY += point[1];
+          }
+          const centroidX = sumX / ring.length;
+          const centroidY = sumY / ring.length;
+
+          // Convert from Web Mercator (EPSG:3857) to WGS84 (EPSG:4326) if needed
+          if (spatialRef && (spatialRef.wkid === 102100 || spatialRef.latestWkid === 3857)) {
+            return this.convertWebMercatorToWGS84(centroidX, centroidY);
+          }
+          
+          // If already in WGS84 or unknown, assume it's already lat/lng
+          return { lat: centroidY, lng: centroidX };
+        }
+      }
+
+      // Handle point geometry
+      if (geometry.x !== undefined && geometry.y !== undefined) {
+        if (spatialRef && (spatialRef.wkid === 102100 || spatialRef.latestWkid === 3857)) {
+          return this.convertWebMercatorToWGS84(geometry.x, geometry.y);
+        }
+        return { lat: geometry.y, lng: geometry.x };
+      }
+    } catch (error) {
+      console.warn('Error extracting coordinates from geometry:', error);
+    }
+
+    return null;
+  }
+
+  private convertWebMercatorToWGS84(x: number, y: number): { lat: number; lng: number } {
+    // Convert Web Mercator (EPSG:3857) to WGS84 (EPSG:4326)
+    const lng = (x / 20037508.34) * 180;
+    let lat = (y / 20037508.34) * 180;
+    lat = 180 / Math.PI * (2 * Math.atan(Math.exp(lat * Math.PI / 180)) - Math.PI / 2);
+    
+    return { lat, lng };
   }
 
   private looksLikeFullAddress(s: string): boolean {

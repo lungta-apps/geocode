@@ -21,8 +21,16 @@ export class GeocodeService {
       throw new Error('No address found in response');
     }
 
-    // Extract coordinates from address using geocoding service
-    const coordinates = await this.extractCoordinatesFromAddress(result.address);
+    // Use coordinates from Montana API if available (most accurate), otherwise geocode the address
+    let coordinates: { lat: number; lng: number } | null = null;
+    
+    if (result.lat && result.lng) {
+      // Use precise coordinates from Montana ArcGIS geometry
+      coordinates = { lat: result.lat, lng: result.lng };
+    } else {
+      // Fall back to address-based geocoding
+      coordinates = await this.extractCoordinatesFromAddress(result.address);
+    }
     
     const propertyInfo: PropertyInfo = {
       geocode: result.geocode || geocode,
@@ -122,34 +130,66 @@ export class GeocodeService {
   }
 
   private async tryMultipleGeocodingServices(address: string): Promise<{ lat: number; lng: number } | null> {
-    // First try: Nominatim with building-level precision
-    try {
-      const encodedAddress = encodeURIComponent(address);
-      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=3&countrycodes=us&addressdetails=1&extratags=1`;
-      
-      const response = await fetch(nominatimUrl, {
-        headers: {
-          'User-Agent': 'Montana Property Lookup App (contact: user@example.com)'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
+    // Enhanced Nominatim queries for Montana-specific accuracy
+    const queries = [
+      // Most specific: Full address with Montana focus
+      `${address}, Montana, United States`,
+      // Backup: Original address
+      address,
+      // Street-level fallback if house number fails
+      address.replace(/^\d+\s+/, '')
+    ];
+
+    for (const query of queries) {
+      try {
+        const encodedAddress = encodeURIComponent(query);
+        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=5&countrycodes=us&addressdetails=1&extratags=1&bounded=1&viewbox=-116.050003,49.000239,-104.039138,44.358221`;
         
-        if (data && data.length > 0) {
-          // Look for the most precise result (building or house number level)
-          const preciseResult = data.find((result: any) => 
-            result.class === 'place' && (result.type === 'house' || result.type === 'building')
-          ) || data[0];
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        const response = await fetch(nominatimUrl, {
+          headers: {
+            'User-Agent': 'Montana Property Lookup App (contact: user@example.com)'
+          },
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const data = await response.json();
           
-          return {
-            lat: parseFloat(preciseResult.lat),
-            lng: parseFloat(preciseResult.lon)
-          };
+          if (data && data.length > 0) {
+            // Prioritize results: house > building > place > highway
+            const resultsByPriority = data.sort((a: any, b: any) => {
+              const priority = { house: 4, building: 3, place: 2, highway: 1 };
+              const aPriority = priority[a.type as keyof typeof priority] || 0;
+              const bPriority = priority[b.type as keyof typeof priority] || 0;
+              return bPriority - aPriority;
+            });
+            
+            // Use the highest priority result that's in Montana
+            for (const result of resultsByPriority) {
+              if (result.display_name && result.display_name.includes('Montana')) {
+                return {
+                  lat: parseFloat(result.lat),
+                  lng: parseFloat(result.lon)
+                };
+              }
+            }
+            
+            // Fallback to first result if none specifically mention Montana
+            return {
+              lat: parseFloat(data[0].lat),
+              lng: parseFloat(data[0].lon)
+            };
+          }
         }
+      } catch (error) {
+        console.warn(`Nominatim geocoding failed for query "${query}":`, error);
+        continue;
       }
-    } catch (error) {
-      console.warn('Nominatim geocoding failed:', error);
     }
 
     return null;
