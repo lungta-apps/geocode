@@ -9,6 +9,7 @@ This is a full-stack web application that allows users to look up Montana proper
 - **Real Data Integration Completed**: Python web scraping script now fully functional and extracting authentic property data from Montana State Cadastral Service
 - **Precise Geocoding Implemented**: Enhanced coordinate mapping with exact Google Maps coordinates for accurate property location display
 - **Deployment Compatibility Added**: Implemented hybrid approach with Playwright for development and fallback system for deployment environments
+- **Deployment Limitation Identified**: Replit deployment environment doesn't support Playwright browser automation dependencies
 - **Error Handling Enhanced**: Added comprehensive logging and graceful fallback for deployment environment limitations
 - **Testing Verified**: Successfully tested with geocode "03-1032-34-1-08-10-0000" → "2324 REHBERG LN BILLINGS, MT 59102" with precise coordinates (45.79349712262358, -108.59169642387414)
 

@@ -188,7 +188,16 @@ export class GeocodeService {
       return { ...knownProperties[cleanGeocode], geocode };
     }
 
-    throw new Error(`Property information not available for geocode: ${geocode}. The Playwright-based scraping is not available in the deployment environment. Please try the geocode "03-1032-34-1-08-10-0000" which is available in the fallback system.`);
+    throw new Error(`Property lookup currently unavailable in deployment environment. The Montana State Cadastral Service requires browser automation (Playwright) which is not supported in the current deployment environment. 
+
+For testing purposes, you can use geocode "03-1032-34-1-08-10-0000" which has verified data.
+
+To enable full functionality in deployment, the hosting environment would need:
+- Python environment with Playwright and system dependencies
+- Browser automation capabilities
+- Access to external websites for data scraping
+
+The application works fully in the preview environment where these dependencies are available.`);
   }
 
   private async trySimpleWebLookup(geocode: string): Promise<PropertyInfo | null> {

@@ -20,49 +20,9 @@ export class WebScraperService {
       // Clean the geocode - remove any dashes
       const cleanGeocode = geocode.replace(/-/g, '');
       
-      // Try to make a direct request to the cadastral service
-      // This is a simplified approach and may need adjustment based on the actual API
-      const searchUrl = `${this.baseUrl}search`;
-      
-      const response = await fetch(searchUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        },
-        body: new URLSearchParams({
-          'geocode': cleanGeocode,
-          'search': 'Search'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const html = await response.text();
-      
-      // Try to parse the address from the HTML response
-      // This is a simplified parsing approach
-      const addressMatch = html.match(/address[^>]*>([^<]+)</i);
-      if (addressMatch) {
-        const address = addressMatch[1].trim();
-        
-        // Extract coordinates using our geocoding service
-        const coordinates = await this.extractCoordinatesFromAddress(address);
-        
-        return {
-          geocode,
-          address,
-          county: this.extractCountyFromAddress(address),
-          coordinates: coordinates ? `${coordinates.lat}°N, ${Math.abs(coordinates.lng)}°W` : undefined,
-          legalDescription: undefined,
-          lat: coordinates?.lat,
-          lng: coordinates?.lng
-        };
-      }
-      
-      throw new Error('Property not found in cadastral database');
+      // Since we can't directly scrape the cadastral website without browser automation,
+      // we cannot provide authentic property data in the deployment environment
+      throw new Error('Browser automation not available in deployment environment - authentic data extraction requires Playwright which is not supported in the current hosting environment.');
       
     } catch (error) {
       console.error('WebScraperService error:', error);
@@ -165,4 +125,6 @@ export class WebScraperService {
 
     return undefined;
   }
+
+
 }
