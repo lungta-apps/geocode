@@ -16,26 +16,16 @@ export class GeocodeService {
   constructor() {
     // Handle __dirname in ES modules
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
-    // Use original Playwright script for reliable data extraction in development
-    // Use requests-based fallback script in deployment
-    if (process.env.REPLIT_DEPLOYMENT) {
-      this.pythonScriptPath = path.join(currentDir, '../scripts/property_lookup_requests.py');
-    } else {
-      this.pythonScriptPath = path.join(currentDir, '../scripts/property_lookup.py');
-    }
+    // Use new API-based script that works in both development and deployment
+    this.pythonScriptPath = path.join(currentDir, '../scripts/property_lookup_api.py');
   }
 
   async getPropertyInfo(geocode: string): Promise<PropertyInfo> {
-    // First try the Playwright approach, then fallback if needed
-    try {
-      return await this.tryPlaywrightLookup(geocode);
-    } catch (error) {
-      console.log('Playwright lookup failed, trying fallback approach');
-      return await this.tryFallbackLookup(geocode);
-    }
+    // Use the new API-based script that works in both environments
+    return await this.tryApiLookup(geocode);
   }
 
-  private async tryPlaywrightLookup(geocode: string): Promise<PropertyInfo> {
+  private async tryApiLookup(geocode: string): Promise<PropertyInfo> {
     return new Promise((resolve, reject) => {
       // Try different Python paths for different environments
       const possiblePythonPaths = [
@@ -57,23 +47,9 @@ export class GeocodeService {
         }
       }
       
-      // Always use the original Playwright script for this method
-      const currentDir = path.dirname(fileURLToPath(import.meta.url));
-      const playwrightScriptPath = path.join(currentDir, '../scripts/property_lookup.py');
+      // Use the new API-based script
       
-      const pythonProcess = spawn(pythonPath, [playwrightScriptPath, geocode], {
-        env: {
-          ...process.env,
-          PLAYWRIGHT_BROWSERS_PATH: process.env.REPLIT_DEPLOYMENT 
-            ? '/opt/virtualenvs/python3/.cache/ms-playwright'
-            : '/home/runner/workspace/.cache/ms-playwright',
-          // Add additional environment variables for deployment
-          PYTHONPATH: process.env.REPLIT_DEPLOYMENT 
-            ? '/opt/virtualenvs/python3/lib/python3.11/site-packages:/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages'
-            : '/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages',
-          PATH: process.env.PATH + ':/opt/virtualenvs/python3/bin'
-        }
-      });
+      const pythonProcess = spawn(pythonPath, [this.pythonScriptPath, geocode]);
       
       let stdout = '';
       let stderr = '';
