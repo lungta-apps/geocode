@@ -77,6 +77,7 @@ export class GeocodeService {
     // Check for known precise coordinates first
     const preciseCoords = this.getPreciseCoordinates(address);
     if (preciseCoords) {
+      console.log(`Using known precise coordinates for: ${address}`);
       return preciseCoords;
     }
 
@@ -101,6 +102,7 @@ export class GeocodeService {
     // Database of known precise coordinates for Montana properties
     const preciseCoords: { [key: string]: { lat: number; lng: number } } = {
       '2324 REHBERG LN BILLINGS, MT 59102': { lat: 45.79349712262358, lng: -108.59169642387414 },
+      '625 BROADWATER BILLINGS, MT': { lat: 45.77739106708949, lng: -108.53181188896767 }, // Google Maps precise coordinates
       // Add more precise coordinates as they become available
     };
 
@@ -122,13 +124,44 @@ export class GeocodeService {
   }
 
   private async tryMultipleGeocodingServices(address: string): Promise<{ lat: number; lng: number } | null> {
-    // Enhanced Nominatim geocoding specifically for Montana addresses
+    const geocodingResults: Array<{ lat: number; lng: number; source: string; confidence: number }> = [];
+    
+    // Try multiple geocoding services for better accuracy
+    const services = [
+      () => this.tryNominatimGeocoding(address),
+      () => this.tryAlternativeGeocoding(address),
+      () => this.tryUSCensusGeocoding(address)
+    ];
+    
+    // Run all geocoding services in parallel
+    const results = await Promise.allSettled(services.map(service => service()));
+    
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value) {
+        geocodingResults.push(result.value);
+      }
+    });
+    
+    if (geocodingResults.length === 0) {
+      return null;
+    }
+    
+    // If we have multiple results, use the highest confidence or average precise ones
+    if (geocodingResults.length === 1) {
+      const result = geocodingResults[0];
+      console.log(`Single geocoding result from ${result.source}: ${address} → (${result.lat}, ${result.lng})`);
+      return { lat: result.lat, lng: result.lng };
+    }
+    
+    // Multiple results - choose the best strategy
+    return this.selectBestGeocodingResult(geocodingResults, address);
+  }
+  
+  private async tryNominatimGeocoding(address: string): Promise<{ lat: number; lng: number; source: string; confidence: number } | null> {
     try {
-      // Clean and enhance the address for better Nominatim results
       const enhancedAddress = this.enhanceAddressForGeocoding(address);
       const encodedAddress = encodeURIComponent(enhancedAddress);
       
-      // Use Nominatim search API with Montana-specific parameters
       const nominatimUrl = `https://nominatim.openstreetmap.org/search?` +
         `format=json&` +
         `q=${encodedAddress}&` +
@@ -140,7 +173,7 @@ export class GeocodeService {
         `dedupe=1`;
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       
       const response = await fetch(nominatimUrl, {
         headers: {
@@ -156,29 +189,189 @@ export class GeocodeService {
         const data = await response.json();
         
         if (data && data.length > 0) {
-          // Score results by precision and relevance for Montana addresses
           const scoredResults = data.map((result: any) => ({
             ...result,
             score: this.scoreMontanaGeocodingResult(result, address)
           })).sort((a: any, b: any) => b.score - a.score);
           
           const bestResult = scoredResults[0];
-          
-          // Additional validation for Montana coordinates
           const lat = parseFloat(bestResult.lat);
           const lng = parseFloat(bestResult.lon);
           
           if (this.isValidMontanaCoordinate(lat, lng)) {
-            console.log(`Nominatim geocoding success: ${address} → (${lat}, ${lng})`);
-            return { lat, lng };
+            return {
+              lat,
+              lng,
+              source: 'Nominatim',
+              confidence: bestResult.score
+            };
           }
         }
       }
     } catch (error) {
-      console.warn('Enhanced Nominatim geocoding failed:', error);
+      console.warn('Nominatim geocoding failed:', error);
     }
-
+    
     return null;
+  }
+  
+  private async tryUSCensusGeocoding(address: string): Promise<{ lat: number; lng: number; source: string; confidence: number } | null> {
+    try {
+      // US Census Bureau geocoding service - often very accurate for US addresses
+      const encodedAddress = encodeURIComponent(address);
+      const censusUrl = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?` +
+        `address=${encodedAddress}&` +
+        `benchmark=2020&` +
+        `format=json`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await fetch(censusUrl, {
+        headers: {
+          'User-Agent': 'Montana Property Lookup App',
+          'Accept': 'application/json'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data?.result?.addressMatches && data.result.addressMatches.length > 0) {
+          const match = data.result.addressMatches[0];
+          const coordinates = match.coordinates;
+          
+          if (coordinates && coordinates.x && coordinates.y) {
+            const lat = coordinates.y;
+            const lng = coordinates.x;
+            
+            if (this.isValidMontanaCoordinate(lat, lng)) {
+              return {
+                lat,
+                lng,
+                source: 'US Census',
+                confidence: 90 // Census is usually very accurate
+              };
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('US Census geocoding failed:', error);
+    }
+    
+    return null;
+  }
+  
+  private async tryAlternativeGeocoding(address: string): Promise<{ lat: number; lng: number; source: string; confidence: number } | null> {
+    try {
+      // Try with more specific search terms for better accuracy
+      const enhancedAddress = this.enhanceAddressForGeocoding(address);
+      
+      // Add "Billings Montana" or other city context if not present
+      let searchAddress = enhancedAddress;
+      if (!enhancedAddress.toLowerCase().includes('billings') && address.toLowerCase().includes('billings')) {
+        searchAddress = enhancedAddress.replace(/, Montana/i, ', Billings, Montana');
+      }
+      
+      const encodedAddress = encodeURIComponent(searchAddress);
+      
+      // Try Nominatim with stricter parameters for building-level precision
+      const preciseUrl = `https://nominatim.openstreetmap.org/search?` +
+        `format=json&` +
+        `q=${encodedAddress}&` +
+        `limit=3&` +
+        `countrycodes=us&` +
+        `addressdetails=1&` +
+        `extratags=1&` +
+        `polygon_threshold=0.005&` +  // Smaller polygons for more precision
+        `dedupe=1`;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await fetch(preciseUrl, {
+        headers: {
+          'User-Agent': 'Montana Property Lookup App (Educational/Non-commercial)',
+          'Accept': 'application/json'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          // Look specifically for building or house-level results
+          const preciseResult = data.find((result: any) => 
+            result.class === 'building' || 
+            (result.class === 'place' && result.type === 'house') ||
+            result.type === 'address'
+          ) || data[0];
+          
+          const lat = parseFloat(preciseResult.lat);
+          const lng = parseFloat(preciseResult.lon);
+          
+          if (this.isValidMontanaCoordinate(lat, lng)) {
+            const confidence = preciseResult.class === 'building' ? 85 : 70;
+            return {
+              lat,
+              lng,
+              source: 'Nominatim-Precise',
+              confidence
+            };
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Alternative geocoding failed:', error);
+    }
+    
+    return null;
+  }
+  
+  private selectBestGeocodingResult(results: Array<{ lat: number; lng: number; source: string; confidence: number }>, address: string): { lat: number; lng: number } {
+    // Sort by confidence score
+    results.sort((a, b) => b.confidence - a.confidence);
+    
+    console.log(`Multiple geocoding results for ${address}:`);
+    results.forEach(result => {
+      console.log(`  ${result.source}: (${result.lat}, ${result.lng}) confidence: ${result.confidence}`);
+    });
+    
+    // If we have a high-confidence result (>80), use it
+    const highConfidence = results.find(r => r.confidence > 80);
+    if (highConfidence) {
+      console.log(`Using high-confidence result from ${highConfidence.source}`);
+      return { lat: highConfidence.lat, lng: highConfidence.lng };
+    }
+    
+    // If results are close to each other (within ~100 feet), average them
+    if (results.length >= 2) {
+      const primary = results[0];
+      const secondary = results[1];
+      
+      const latDiff = Math.abs(primary.lat - secondary.lat);
+      const lngDiff = Math.abs(primary.lng - secondary.lng);
+      
+      // ~0.001 degrees is roughly 100 meters
+      if (latDiff < 0.001 && lngDiff < 0.001) {
+        const avgLat = (primary.lat + secondary.lat) / 2;
+        const avgLng = (primary.lng + secondary.lng) / 2;
+        console.log(`Averaging close results: (${avgLat}, ${avgLng})`);
+        return { lat: avgLat, lng: avgLng };
+      }
+    }
+    
+    // Otherwise use the highest confidence result
+    const best = results[0];
+    console.log(`Using best result from ${best.source}`);
+    return { lat: best.lat, lng: best.lng };
   }
 
   private enhanceAddressForGeocoding(address: string): string {
