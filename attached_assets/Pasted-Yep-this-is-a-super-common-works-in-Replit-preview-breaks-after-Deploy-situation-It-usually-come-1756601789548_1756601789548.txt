@@ -1,0 +1,197 @@
+Yep—this is a super common “works in Replit preview, breaks after Deploy” situation. It usually comes down to one (or more) of these differences between the preview workspace and the deployed container:
+
+1. The scrape is happening in the browser (client-side)
+   • In preview, your page can fetch the cadastral site directly from your browser.
+   • After deploy, that same client-side fetch gets blocked by CORS, CSP, or bot/CDN protections.
+   • Fix: move the scraping to your server (backend) and call your own endpoint from the frontend. The server makes the request, returns clean JSON to the browser.
+
+2. Headless browser isn’t installed / can’t start in Deploy
+   • Playwright/Puppeteer often work in preview but fail in Deploy if Chromium isn’t installed or if sandbox flags aren’t set.
+   • Fix: install browsers during build and launch with `--no-sandbox` and `--disable-dev-shm-usage`.
+
+3. Different egress IP / bot protection
+   • Some government sites rate-limit or block certain IP ranges (including cloud hosts used by Deployments).
+   • Fix: server-side retry with a legit User-Agent, backoff, and realistic timeouts; cache results; or (if necessary) switch to an alternative data source or a simple “submit + parse” on the DoR PRC site instead of the cadastral Explorer.
+
+4. Binding/PORT mismatch
+   • In Deploy, you must bind to `0.0.0.0` and the `$PORT` environment variable.
+   • Fix: ensure your web server uses `host="0.0.0.0", port=int(os.getenv("PORT", 8000))`.
+
+---
+
+# A robust fix you can drop in
+
+Below is a minimal working pattern that:
+
+* Moves scraping to the backend (FastAPI) using Playwright (headless Chromium).
+* Exposes `/lookup?geocode=…` that returns `{ "address": "…" }`.
+* Is deploy-ready on Replit (installs browsers during build, uses correct host/port, and Playwright’s no-sandbox flags).
+* Your frontend just calls this endpoint and displays the address + map.
+
+## 1) `app.py` (FastAPI + Playwright)
+
+```python
+# app.py
+import os
+import asyncio
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
+from playwright.async_api import async_playwright
+
+app = FastAPI()
+
+CADASTRAL_BASE = "https://svc.mt.gov/msl/cadastral/?page=PropertyDetails&geocode="
+
+# A small helper so we reuse a single browser across requests (faster/cheaper)
+playwright_singleton = {"pw": None, "browser": None}
+
+async def get_browser():
+    if playwright_singleton["pw"] is None:
+        playwright_singleton["pw"] = await async_playwright().start()
+    if playwright_singleton["browser"] is None:
+        # Use no-sandbox flags for restricted containers
+        playwright_singleton["browser"] = await playwright_singleton["pw"].chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage"]
+        )
+    return playwright_singleton["browser"]
+
+@app.get("/lookup")
+async def lookup(geocode: str = Query(..., min_length=5)):
+    url = CADASTRAL_BASE + geocode.strip()
+
+    browser = await get_browser()
+    context = await browser.new_context(
+        user_agent=(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        )
+    )
+    page = await context.new_page()
+
+    try:
+        # Navigate and wait for network to settle (site is JS-heavy)
+        await page.goto(url, wait_until="networkidle", timeout=45000)
+
+        # Strategy 1: look for a clean label "Property Address" and its value sibling
+        # Adjust selectors if the site’s DOM changes.
+        label = await page.locator("//div[contains(., 'Property Address')]").first
+
+        if await label.count() == 0:
+            # Try another approach: the site sometimes uses table rows or definition lists
+            # Scan for a known pattern
+            all_text = await page.text_content("body")
+            if all_text and "Property Address" in all_text:
+                # Fallback: try to grab the next sibling <div> after the label pattern
+                value = await page.locator(
+                    "//div[normalize-space()='Property Address']/following-sibling::div[1]"
+                ).first
+                if await value.count() > 0:
+                    address = (await value.text_content() or "").strip()
+                else:
+                    address = None
+            else:
+                address = None
+        else:
+            # The common structure is label in one <div> and the value in the following sibling <div>
+            value = await page.locator(
+                "//div[contains(., 'Property Address')]/following-sibling::div[1]"
+            ).first
+            address = (await value.text_content() or "").strip() if await value.count() > 0 else None
+
+        if not address:
+            # Try a looser CSS pattern as another fallback
+            possible = await page.locator("text=Property Address").first
+            if await possible.count() > 0:
+                # Walk DOM via JS to fetch next sibling’s text
+                handle = await possible.element_handle()
+                next_sibling = await page.evaluate_handle(
+                    "(el) => el.nextElementSibling ? el.nextElementSibling.innerText : null", handle
+                )
+                address = (await next_sibling.json_value()) if next_sibling else None
+                address = address.strip() if address else None
+
+        if not address:
+            raise HTTPException(status_code=404, detail="Address not found on the page.")
+
+        return JSONResponse({"geocode": geocode, "address": address})
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lookup failed: {e}")
+    finally:
+        await context.close()
+
+@app.get("/")
+def root():
+    return {"ok": True, "message": "Use /lookup?geocode=XX-XXXX-..."}
+```
+
+## 2) `requirements.txt`
+
+```
+fastapi
+uvicorn[standard]
+playwright
+```
+
+*(If you’re using Poetry, add these with `poetry add` instead.)*
+
+## 3) Replit build step: install Chromium for Playwright
+
+In Replit Deploy → **Build command**, add:
+
+```
+python -m playwright install --with-deps chromium
+```
+
+This ensures the headless browser exists in the deploy image (it’s often present in the interactive workspace but missing in Deploy).
+
+## 4) Replit run/entry command (Procfile or Deploy → Run command)
+
+Use Uvicorn and the Replit-provided PORT:
+
+```
+uvicorn app:app --host 0.0.0.0 --port $PORT
+```
+
+(If you’re not using a Procfile, set this as the Deploy “Run” command.)
+
+## 5) Frontend change (critical)
+
+* **Stop** scraping the cadastral site from the browser (client).
+* Instead, call your own endpoint, e.g.:
+
+```js
+async function fetchAddress(geocode) {
+  const res = await fetch(`/lookup?geocode=${encodeURIComponent(geocode)}`);
+  if (!res.ok) {
+    const msg = await res.json().catch(() => ({}));
+    throw new Error(msg.detail || `Lookup failed (${res.status})`);
+  }
+  return res.json(); // { geocode, address }
+}
+```
+
+Then display the returned `address` and drop a pin on your map (Leaflet/Mapbox/etc.). If you need geocoding for the map, call your geocoder with the **address string** (not the cadastral site) from your frontend or (safer) from your backend if your key must be secret.
+
+---
+
+## Additional hardening (optional but helpful)
+
+* **Delays & backoff**: Some pages lazy-render. Add `await page.wait_for_timeout(1000–2000)` between steps if needed.
+* **Timeouts**: Use generous timeouts (30–60s) and user-friendly error messages.
+* **Caching**: Save (geocode → address) in a simple SQLite/redis cache so repeat lookups don’t keep hitting the site.
+* **Robots/ToS**: Confirm automated access is allowed. Throttle requests (e.g., 1–2/sec max).
+* **Alternate source**: If the cadastral explorer is fragile, consider the DoR PRC search flow (submit geocode → parse results page) if it’s more stable in headless.
+
+---
+
+## Likely reason yours “works in preview but not deployed”
+
+* If your current code fetches the cadastral page **from the browser**, it will almost certainly fail post-deploy due to CORS and/or anti-bot headers. Moving the scrape to the server (as above) removes that entire class of problems.
+* If you were already using Playwright, the missing browser in Deploy (and lack of `--no-sandbox`) is the other #1 culprit—fixed by the build step and launch args shown above.
+
+If you want, paste your current scraping snippet and I’ll adapt the selectors to the exact DOM you’re seeing—but the structure above should get you unstuck today.
