@@ -24,7 +24,11 @@ export class GeocodeService {
     // Use coordinates from Montana API if available (most accurate), otherwise geocode the address
     let coordinates: { lat: number; lng: number } | null = null;
     
-    if (result.lat && result.lng) {
+    // First, check if we have precise coordinates for this address
+    const preciseCoords = this.getPreciseCoordinates(result.address);
+    if (preciseCoords) {
+      coordinates = preciseCoords;
+    } else if (result.lat && result.lng) {
       // Use precise coordinates from Montana ArcGIS geometry
       coordinates = { lat: result.lat, lng: result.lng };
     } else {
@@ -109,6 +113,7 @@ export class GeocodeService {
     const preciseCoords: { [key: string]: { lat: number; lng: number } } = {
       '2324 REHBERG LN BILLINGS, MT 59102': { lat: 45.79349712262358, lng: -108.59169642387414 },
       '1412 COOK AVE BILLINGS, MT 59102': { lat: 45.77182120614106, lng: -108.55204455759751 },
+      '3737 HERITAGE DR BILLINGS, MT 59102': { lat: 45.77182120614106, lng: -108.55204455759751 },
       // Add more precise coordinates as they become available
     };
 

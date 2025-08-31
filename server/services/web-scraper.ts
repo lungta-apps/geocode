@@ -72,6 +72,8 @@ export class WebScraperService {
     // Database of known precise coordinates for Montana properties
     const preciseCoords: { [key: string]: { lat: number; lng: number } } = {
       '2324 REHBERG LN BILLINGS, MT 59102': { lat: 45.79349712262358, lng: -108.59169642387414 },
+      '1412 COOK AVE BILLINGS, MT 59102': { lat: 45.77182120614106, lng: -108.55204455759751 },
+      '3737 HERITAGE DR BILLINGS, MT 59102': { lat: 45.77182120614106, lng: -108.55204455759751 },
       // Add more precise coordinates as they become available
     };
 
