@@ -12,6 +12,7 @@ This is a full-stack web application that allows users to look up Montana proper
 - **Performance Optimization**: Reduced response times from 20+ seconds to under 600ms consistently
 - **Deployment Ready**: No external dependencies, works in both preview and deployment environments
 - **Testing Verified**: Successfully tested with geocode "03-1032-34-1-08-10-0000" → "2324 REHBERG LN BILLINGS, MT 59102" with precise coordinates (45.79349712262358, -108.59169642387414)
+- **Map Accuracy Improvement**: Prioritized address-based geocoding over ArcGIS geometry centroids for more precise building-level coordinates on all property lookups
 
 ## User Preferences
 
