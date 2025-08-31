@@ -21,21 +21,8 @@ export class GeocodeService {
       throw new Error('No address found in response');
     }
 
-    // Convert ArcGIS geometry centroid to OpenStreetMap coordinates
-    let coordinates: { lat: number; lng: number } | null = null;
-    
-    // First, check if we have known precise coordinates for this address
-    const preciseCoords = this.getPreciseCoordinates(result.address);
-    if (preciseCoords) {
-      coordinates = preciseCoords;
-    } else if (result.lat && result.lng) {
-      // Convert ArcGIS centroid coordinates to OpenStreetMap coordinates
-      coordinates = await this.convertArcGISToOpenStreetMap(result.lat, result.lng, result.address);
-      console.log(`Converted ArcGIS coordinates for ${result.address}:`, coordinates);
-    } else {
-      // Use address-based geocoding (more accurate for building locations)
-      coordinates = await this.extractCoordinatesFromAddress(result.address);
-    }
+    // Extract coordinates from address using geocoding service
+    const coordinates = await this.extractCoordinatesFromAddress(result.address);
     
     const propertyInfo: PropertyInfo = {
       geocode: result.geocode || geocode,
@@ -134,66 +121,34 @@ export class GeocodeService {
   }
 
   private async tryMultipleGeocodingServices(address: string): Promise<{ lat: number; lng: number } | null> {
-    // Enhanced Nominatim queries for Montana-specific accuracy
-    const queries = [
-      // Most specific: Full address with Montana focus
-      `${address}, Montana, United States`,
-      // Backup: Original address
-      address,
-      // Street-level fallback if house number fails
-      address.replace(/^\d+\s+/, '')
-    ];
-
-    for (const query of queries) {
-      try {
-        const encodedAddress = encodeURIComponent(query);
-        const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=5&countrycodes=us&addressdetails=1&extratags=1&bounded=1&viewbox=-116.050003,49.000239,-104.039138,44.358221`;
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
-        const response = await fetch(nominatimUrl, {
-          headers: {
-            'User-Agent': 'Montana Property Lookup App (contact: user@example.com)'
-          },
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data && data.length > 0) {
-            // Prioritize results: house > building > place > highway
-            const resultsByPriority = data.sort((a: any, b: any) => {
-              const priority = { house: 4, building: 3, place: 2, highway: 1 };
-              const aPriority = priority[a.type as keyof typeof priority] || 0;
-              const bPriority = priority[b.type as keyof typeof priority] || 0;
-              return bPriority - aPriority;
-            });
-            
-            // Use the highest priority result that's in Montana
-            for (const result of resultsByPriority) {
-              if (result.display_name && result.display_name.includes('Montana')) {
-                return {
-                  lat: parseFloat(result.lat),
-                  lng: parseFloat(result.lon)
-                };
-              }
-            }
-            
-            // Fallback to first result if none specifically mention Montana
-            return {
-              lat: parseFloat(data[0].lat),
-              lng: parseFloat(data[0].lon)
-            };
-          }
+    // First try: Nominatim with building-level precision
+    try {
+      const encodedAddress = encodeURIComponent(address);
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=3&countrycodes=us&addressdetails=1&extratags=1`;
+      
+      const response = await fetch(nominatimUrl, {
+        headers: {
+          'User-Agent': 'Montana Property Lookup App (contact: user@example.com)'
         }
-      } catch (error) {
-        console.warn(`Nominatim geocoding failed for query "${query}":`, error);
-        continue;
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          // Look for the most precise result (building or house number level)
+          const preciseResult = data.find((result: any) => 
+            result.class === 'place' && (result.type === 'house' || result.type === 'building')
+          ) || data[0];
+          
+          return {
+            lat: parseFloat(preciseResult.lat),
+            lng: parseFloat(preciseResult.lon)
+          };
+        }
       }
+    } catch (error) {
+      console.warn('Nominatim geocoding failed:', error);
     }
 
     return null;
@@ -219,77 +174,5 @@ export class GeocodeService {
 
     // Default to Montana center if no specific city found
     return { lat: 47.0527, lng: -109.6333 };
-  }
-
-  private async convertArcGISToOpenStreetMap(arcgisLat: number, arcgisLng: number, address: string): Promise<{ lat: number; lng: number } | null> {
-    console.log(`Converting ArcGIS centroid (${arcgisLat}, ${arcgisLng}) for address: ${address}`);
-    
-    try {
-      // Method 1: Use the original address for OpenStreetMap geocoding (most reliable)
-      const osmCoords = await this.tryMultipleGeocodingServices(address);
-      if (osmCoords) {
-        console.log(`OpenStreetMap geocoding for address gave:`, osmCoords);
-        
-        // Apply coordinate correction to match more accurate reference systems like Google Maps
-        const correctedOSM = this.applyCentroidCorrection(osmCoords.lat, osmCoords.lng);
-        return correctedOSM;
-      }
-
-      // Method 2: Try reverse geocoding the ArcGIS centroid to get a better address
-      const reverseAddress = await this.reverseGeocodeArcGISCentroid(arcgisLat, arcgisLng);
-      if (reverseAddress && reverseAddress !== address) {
-        console.log(`Reverse geocoded centroid to address: ${reverseAddress}`);
-        const reverseCoords = await this.tryMultipleGeocodingServices(reverseAddress);
-        if (reverseCoords) {
-          return reverseCoords;
-        }
-      }
-
-      // Method 3: Apply systematic offset correction based on known differences
-      // This is a heuristic approach for Montana properties
-      const correctedCoords = this.applyCentroidCorrection(arcgisLat, arcgisLng);
-      console.log(`Applied centroid correction:`, correctedCoords);
-      return correctedCoords;
-      
-    } catch (error) {
-      console.error('Error converting ArcGIS to OpenStreetMap coordinates:', error);
-      return { lat: arcgisLat, lng: arcgisLng }; // Fallback to original
-    }
-  }
-
-  private async reverseGeocodeArcGISCentroid(lat: number, lng: number): Promise<string | null> {
-    try {
-      const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
-      
-      const response = await fetch(nominatimUrl, {
-        headers: {
-          'User-Agent': 'Montana Property Lookup App (contact: user@example.com)'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.display_name) {
-          return data.display_name;
-        }
-      }
-    } catch (error) {
-      console.warn('Reverse geocoding failed:', error);
-    }
-    
-    return null;
-  }
-
-  private applyCentroidCorrection(lat: number, lng: number): { lat: number; lng: number } {
-    // Coordinate correction to align with more accurate reference systems (like Google Maps)
-    // Based on systematic differences observed between OpenStreetMap and Google geocoding for Montana
-    
-    const latOffset = -0.0045; // Southward adjustment for Montana region
-    const lngOffset = 0.0613;   // Eastward adjustment for Montana region
-    
-    return {
-      lat: lat + latOffset,
-      lng: lng + lngOffset
-    };
   }
 }
