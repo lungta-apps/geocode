@@ -4,7 +4,15 @@
 
 This is a full-stack web application that allows users to look up Montana property information using geocodes. Users enter a Montana property geocode, and the application extracts the physical address from the Montana State Library cadastral database, displays the address information, and shows the location on an interactive map with precise coordinates. The application is built with a React frontend, Express backend, and uses web scraping to retrieve property data from the Montana cadastral website.
 
-## Recent Changes (August 31, 2025)
+## Recent Changes (September 1, 2025)
+- **Parcel Polygon Mapping**: Enhanced map display to show actual property parcel boundaries from Montana API instead of single points
+- **Montana API Geometry Integration**: Updated ArcGIS REST API calls to request and process polygon geometry data (outSR=4326)
+- **React Leaflet Polygon Rendering**: Implemented polygon visualization using React Leaflet with semi-transparent fill and colored borders
+- **Coordinate System Fixes**: Resolved coordinate conversion issues to properly display Montana parcel polygons in lat/lng format
+- **Enhanced Map Legend**: Updated map legend to distinguish between parcel boundaries and property center points
+- **Auto-Fit Map Bounds**: Map automatically adjusts to show the entire parcel polygon instead of fixed zoom on center point
+
+## Previous Changes (August 31, 2025)
 - **Deployment Issue Completely Resolved**: Eliminated all Python/Playwright dependencies for full deployment compatibility
 - **Pure Node.js Implementation**: Replaced Python scripts with native TypeScript/Node.js using official Montana ArcGIS REST API
 - **Official Montana API Integration**: Direct integration with Montana State GIS Service ArcGIS REST API at `gisservicemt.gov`
