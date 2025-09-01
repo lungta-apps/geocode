@@ -21,8 +21,18 @@ export class GeocodeService {
       throw new Error('No address found in response');
     }
 
-    // Extract coordinates from address using geocoding service
-    const coordinates = await this.extractCoordinatesFromAddress(result.address);
+    // Calculate center point from parcel geometry for fallback coordinates
+    let coordinates: { lat: number; lng: number } | null = null;
+    
+    if (result.parcelGeometry) {
+      // Calculate center of polygon for display coordinates
+      coordinates = this.calculatePolygonCenter(result.parcelGeometry);
+      console.log(`Using parcel center coordinates for: ${result.address}`);
+    } else {
+      // Fallback to geocoding service if no parcel geometry
+      coordinates = await this.extractCoordinatesFromAddress(result.address);
+      console.log(`Geocoding address (no parcel geometry): ${result.address}`);
+    }
     
     const propertyInfo: PropertyInfo = {
       geocode: result.geocode || geocode,
@@ -31,7 +41,8 @@ export class GeocodeService {
       coordinates: coordinates ? `${coordinates.lat}°N, ${Math.abs(coordinates.lng)}°W` : undefined,
       legalDescription: undefined,
       lat: coordinates?.lat,
-      lng: coordinates?.lng
+      lng: coordinates?.lng,
+      parcelGeometry: result.parcelGeometry
     };
 
     return propertyInfo;
@@ -174,5 +185,36 @@ export class GeocodeService {
 
     // Default to Montana center if no specific city found
     return { lat: 47.0527, lng: -109.6333 };
+  }
+
+  private calculatePolygonCenter(geometry: { type: "Polygon"; coordinates: number[][][] }): { lat: number; lng: number } | null {
+    try {
+      if (!geometry.coordinates || geometry.coordinates.length === 0) {
+        return null;
+      }
+
+      // Get the outer ring (first ring in the polygon)
+      const outerRing = geometry.coordinates[0];
+      if (!outerRing || outerRing.length === 0) {
+        return null;
+      }
+
+      // Calculate centroid of the polygon
+      let totalLat = 0;
+      let totalLng = 0;
+      
+      for (const point of outerRing) {
+        totalLng += point[0]; // longitude
+        totalLat += point[1]; // latitude
+      }
+
+      const centerLat = totalLat / outerRing.length;
+      const centerLng = totalLng / outerRing.length;
+
+      return { lat: centerLat, lng: centerLng };
+    } catch (error) {
+      console.warn('Failed to calculate polygon center:', error);
+      return null;
+    }
   }
 }

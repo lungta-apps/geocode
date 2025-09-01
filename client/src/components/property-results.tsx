@@ -152,7 +152,8 @@ export function PropertyResults({ property, onCopyAddress, onOpenInMaps }: Prope
               <PropertyMap 
                 lat={property.lat} 
                 lng={property.lng} 
-                address={property.address} 
+                address={property.address}
+                parcelGeometry={property.parcelGeometry}
               />
             ) : (
               <div className="w-full h-80 bg-surface-variant rounded-lg border border-gray-600 flex items-center justify-center">

@@ -1,9 +1,10 @@
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus } from "lucide-react";
+import { PropertyInfo } from "@shared/schema";
 
 // Fix for default markers in React Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -17,14 +18,25 @@ interface PropertyMapProps {
   lat: number;
   lng: number;
   address: string;
+  parcelGeometry?: PropertyInfo['parcelGeometry'];
 }
 
-function MapController({ lat, lng }: { lat: number; lng: number }) {
+function MapController({ lat, lng, parcelGeometry }: { lat: number; lng: number; parcelGeometry?: PropertyInfo['parcelGeometry'] }) {
   const map = useMap();
   
   useEffect(() => {
-    map.setView([lat, lng], 15);
-  }, [map, lat, lng]);
+    if (parcelGeometry && parcelGeometry.coordinates && parcelGeometry.coordinates.length > 0) {
+      // Calculate bounds of the polygon and fit map to it
+      const outerRing = parcelGeometry.coordinates[0];
+      const bounds = new L.LatLngBounds(
+        outerRing.map(([lng, lat]) => [lat, lng] as [number, number])
+      );
+      map.fitBounds(bounds, { padding: [20, 20] });
+    } else {
+      // Fallback to center point
+      map.setView([lat, lng], 15);
+    }
+  }, [map, lat, lng, parcelGeometry]);
 
   return null;
 }
@@ -56,7 +68,7 @@ function ZoomControls() {
   );
 }
 
-export function PropertyMap({ lat, lng, address }: PropertyMapProps) {
+export function PropertyMap({ lat, lng, address, parcelGeometry }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
 
   // Custom marker icon for better visibility on dark theme
@@ -87,24 +99,52 @@ export function PropertyMap({ lat, lng, address }: PropertyMapProps) {
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={20}
         />
+        {/* Render parcel polygon if geometry is available */}
+        {parcelGeometry && parcelGeometry.coordinates && (
+          <Polygon
+            positions={parcelGeometry.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])}
+            pathOptions={{
+              color: '#F44336',
+              weight: 2,
+              opacity: 1,
+              fillColor: '#F44336',
+              fillOpacity: 0.1
+            }}
+          >
+            <Popup className="dark-popup">
+              <div className="text-gray-900 font-sans">
+                <strong className="text-primary block mb-1">Property Parcel</strong>
+                <span className="text-sm">{address}</span>
+              </div>
+            </Popup>
+          </Polygon>
+        )}
+        
+        {/* Center point marker */}
         <Marker position={[lat, lng]} icon={customIcon}>
           <Popup className="dark-popup">
             <div className="text-gray-900 font-sans">
-              <strong className="text-primary block mb-1">Property Location</strong>
+              <strong className="text-primary block mb-1">Property Center</strong>
               <span className="text-sm">{address}</span>
             </div>
           </Popup>
         </Marker>
-          <MapController lat={lat} lng={lng} />
+          <MapController lat={lat} lng={lng} parcelGeometry={parcelGeometry} />
           <ZoomControls />
         </MapContainer>
       </div>
       
       {/* Map Legend */}
       <div className="mt-4 flex items-center space-x-4 text-sm text-on-surface-variant">
+        {parcelGeometry && (
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 border-2 border-red-500 bg-red-500 bg-opacity-10"></div>
+            <span>Parcel Boundary</span>
+          </div>
+        )}
         <div className="flex items-center space-x-2">
           <div className="w-3 h-3 bg-red-500 rounded-full border border-white"></div>
-          <span>Property Location</span>
+          <span>{parcelGeometry ? 'Property Center' : 'Property Location'}</span>
         </div>
       </div>
     </div>

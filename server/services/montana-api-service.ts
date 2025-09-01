@@ -1,6 +1,17 @@
 // Montana cadastral property lookup using official ArcGIS REST API
 // This eliminates all Python dependencies for deployment compatibility
 
+import { polygonGeometrySchema } from '@shared/schema';
+import { z } from 'zod';
+
+// ArcGIS geometry interface for polygon parcels
+interface ArcGISGeometry {
+  rings: number[][][]; // Array of rings, each ring is an array of [x, y] coordinates
+  spatialReference?: {
+    wkid: number;
+  };
+}
+
 interface ArcGISResponse {
   features: Array<{
     attributes: {
@@ -11,15 +22,19 @@ interface ArcGISResponse {
       CountyName?: string;
       OwnerName?: string;
     };
-    geometry?: any;
+    geometry?: ArcGISGeometry;
   }>;
 }
+
+// Use the schema type for consistency
+type PolygonGeometry = z.infer<typeof polygonGeometrySchema>;
 
 interface PropertyLookupResult {
   success: boolean;
   address?: string;
   geocode?: string;
   error?: string;
+  parcelGeometry?: PolygonGeometry;
 }
 
 export class MontanaApiService {
@@ -99,7 +114,15 @@ export class MontanaApiService {
           if (addressParts.length > 0) {
             const address = addressParts.join(" ");
             if (this.looksLikeFullAddress(address)) {
-              return { success: true, address, geocode };
+              // Extract polygon geometry if available
+              const parcelGeometry = this.convertArcGISGeometryToGeoJSON(feature.geometry);
+              
+              return { 
+                success: true, 
+                address, 
+                geocode,
+                parcelGeometry
+              };
             }
           }
         }
@@ -189,5 +212,27 @@ export class MontanaApiService {
     }
     // Must contain MT and a zip code
     return /,\s*MT\s*\d{5}(?:-\d{4})?$/i.test(s);
+  }
+
+  private convertArcGISGeometryToGeoJSON(geometry?: ArcGISGeometry): PolygonGeometry | undefined {
+    if (!geometry || !geometry.rings || geometry.rings.length === 0) {
+      return undefined;
+    }
+
+    try {
+      // Convert ArcGIS rings to GeoJSON coordinates format
+      // ArcGIS uses [x, y] (longitude, latitude), which is the same as GeoJSON
+      const coordinates = geometry.rings.map(ring => 
+        ring.map(point => [point[0], point[1]] as [number, number]) // [lng, lat] as tuple
+      );
+
+      return {
+        type: "Polygon",
+        coordinates
+      };
+    } catch (error) {
+      console.warn('Failed to convert ArcGIS geometry to GeoJSON:', error);
+      return undefined;
+    }
   }
 }
