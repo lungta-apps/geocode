@@ -80,6 +80,7 @@ export class MontanaApiService {
           where: `PARCELID='${variant}'`,
           outFields: "PARCELID,AddressLine1,AddressLine2,CityStateZip,CountyName,OwnerName",
           returnGeometry: "true",
+          outSR: "4326", // Request geometry in WGS84 (lat/lng) coordinate system
           f: "json"
         });
 
@@ -220,10 +221,10 @@ export class MontanaApiService {
     }
 
     try {
+      // Montana ArcGIS now returns coordinates in lat/lng format (due to outSR=4326)
       // Convert ArcGIS rings to GeoJSON coordinates format
-      // ArcGIS uses [x, y] (longitude, latitude), which is the same as GeoJSON
       const coordinates = geometry.rings.map(ring => 
-        ring.map(point => [point[0], point[1]] as [number, number]) // [lng, lat] as tuple
+        ring.map(point => [point[0], point[1]] as [number, number]) // [lng, lat]
       );
 
       return {
