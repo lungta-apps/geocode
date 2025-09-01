@@ -52,6 +52,7 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: 0, // Disabled for testing new coordinates
+      gcTime: 0, // Disable caching completely
       retry: false,
     },
     mutations: {
