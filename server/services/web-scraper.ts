@@ -71,7 +71,7 @@ export class WebScraperService {
   private getPreciseCoordinates(address: string): { lat: number; lng: number } | null {
     // Database of known precise coordinates for Montana properties
     const preciseCoords: { [key: string]: { lat: number; lng: number } } = {
-      // '2324 REHBERG LN BILLINGS, MT 59102': { lat: 45.79349712262358, lng: -108.59169642387414 }, // Disabled to test new geocoding
+      '2324 REHBERG LN BILLINGS, MT 59102': { lat: 45.79349712262358, lng: -108.59169642387414 },
       // Add more precise coordinates as they become available
     };
 
