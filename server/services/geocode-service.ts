@@ -318,7 +318,10 @@ export class GeocodeService {
           const lng = parseFloat(preciseResult.lon);
           
           if (this.isValidMontanaCoordinate(lat, lng)) {
-            const confidence = preciseResult.class === 'building' ? 85 : 70;
+            // Higher confidence for building-level results since they're more accurate for property mapping
+            const confidence = preciseResult.class === 'building' ? 95 : 
+                             preciseResult.type === 'house' ? 90 : 
+                             preciseResult.type === 'address' ? 85 : 75;
             return {
               lat,
               lng,
@@ -336,41 +339,41 @@ export class GeocodeService {
   }
   
   private selectBestGeocodingResult(results: Array<{ lat: number; lng: number; source: string; confidence: number }>, address: string): { lat: number; lng: number } {
-    // Sort by confidence score
-    results.sort((a, b) => b.confidence - a.confidence);
-    
     console.log(`Multiple geocoding results for ${address}:`);
     results.forEach(result => {
       console.log(`  ${result.source}: (${result.lat}, ${result.lng}) confidence: ${result.confidence}`);
     });
     
-    // If we have a high-confidence result (>80), use it
-    const highConfidence = results.find(r => r.confidence > 80);
-    if (highConfidence) {
-      console.log(`Using high-confidence result from ${highConfidence.source}`);
-      return { lat: highConfidence.lat, lng: highConfidence.lng };
+    // Prioritize building-level precision over confidence scores
+    // Nominatim-Precise is often more accurate at building level than US Census
+    const preciseResult = results.find(r => r.source === 'Nominatim-Precise' && r.confidence >= 70);
+    if (preciseResult) {
+      console.log(`Using building-level precise result from ${preciseResult.source}`);
+      return { lat: preciseResult.lat, lng: preciseResult.lng };
     }
     
-    // If results are close to each other (within ~100 feet), average them
+    // If results are close to each other (within ~50 meters), average the most precise ones
     if (results.length >= 2) {
-      const primary = results[0];
-      const secondary = results[1];
+      const sortedByConfidence = [...results].sort((a, b) => b.confidence - a.confidence);
+      const primary = sortedByConfidence[0];
+      const secondary = sortedByConfidence[1];
       
       const latDiff = Math.abs(primary.lat - secondary.lat);
       const lngDiff = Math.abs(primary.lng - secondary.lng);
       
-      // ~0.001 degrees is roughly 100 meters
-      if (latDiff < 0.001 && lngDiff < 0.001) {
+      // ~0.0005 degrees is roughly 50 meters - tighter threshold for precision
+      if (latDiff < 0.0005 && lngDiff < 0.0005) {
         const avgLat = (primary.lat + secondary.lat) / 2;
         const avgLng = (primary.lng + secondary.lng) / 2;
-        console.log(`Averaging close results: (${avgLat}, ${avgLng})`);
+        console.log(`Averaging close high-precision results: (${avgLat}, ${avgLng})`);
         return { lat: avgLat, lng: avgLng };
       }
     }
     
-    // Otherwise use the highest confidence result
+    // Sort by confidence and use the highest
+    results.sort((a, b) => b.confidence - a.confidence);
     const best = results[0];
-    console.log(`Using best result from ${best.source}`);
+    console.log(`Using highest confidence result from ${best.source}`);
     return { lat: best.lat, lng: best.lng };
   }
 
