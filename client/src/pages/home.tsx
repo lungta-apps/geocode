@@ -23,9 +23,7 @@ export default function Home() {
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
     onSuccess: (response: ApiResponse) => {
-      console.log('API Response received:', response);
       if (response.success && response.data) {
-        console.log('Setting property data:', response.data);
         setPropertyData(response.data);
         setErrorState(null);
         showToast("Property information loaded successfully!", "success");

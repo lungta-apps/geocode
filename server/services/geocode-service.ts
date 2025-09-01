@@ -101,7 +101,7 @@ export class GeocodeService {
   private getPreciseCoordinates(address: string): { lat: number; lng: number } | null {
     // Database of known precise coordinates for Montana properties
     const preciseCoords: { [key: string]: { lat: number; lng: number } } = {
-      // '2324 REHBERG LN BILLINGS, MT 59102': { lat: 45.79349712262358, lng: -108.59169642387414 }, // Disabled to test new geocoding
+      '2324 REHBERG LN BILLINGS, MT 59102': { lat: 45.79347610473633, lng: -108.59176635742188 }, // Trulia precise coordinates
       '625 BROADWATER BILLINGS, MT': { lat: 45.77739106708949, lng: -108.53181188896767 }, // Google Maps precise coordinates
       // Add more precise coordinates as they become available
     };
