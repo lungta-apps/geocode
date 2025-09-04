@@ -4,7 +4,14 @@
 
 This is a full-stack web application that allows users to look up Montana property information using geocodes. Users enter a Montana property geocode, and the application extracts the physical address from the Montana State Library cadastral database, displays the address information, and shows the location on an interactive map with precise coordinates. The application is built with a React frontend, Express backend, and uses web scraping to retrieve property data from the Montana cadastral website.
 
-## Recent Changes (September 1, 2025)
+## Recent Changes (September 4, 2025)
+- **Deployment Compatibility Fixes**: Resolved deployment initialization failures by removing unused session dependencies
+- **Enhanced Server Error Handling**: Added comprehensive startup error handling with detailed logging and graceful error recovery
+- **Process Error Handlers**: Implemented uncaught exception and unhandled rejection handlers to prevent silent crashes
+- **Cleanup Legacy Dependencies**: Removed all unused session management packages (express-session, passport, connect-pg-simple) 
+- **Robust Server Startup**: Added environment validation, port verification, and enhanced server error handling for production deployment
+
+## Previous Changes (September 1, 2025)
 - **Parcel Polygon Mapping**: Enhanced map display to show actual property parcel boundaries from Montana API instead of single points
 - **Montana API Geometry Integration**: Updated ArcGIS REST API calls to request and process polygon geometry data (outSR=4326)
 - **React Leaflet Polygon Rendering**: Implemented polygon visualization using React Leaflet with semi-transparent fill and colored borders
