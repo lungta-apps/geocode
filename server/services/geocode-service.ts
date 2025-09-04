@@ -1,4 +1,4 @@
-import { PropertyInfo } from '@shared/schema';
+import { PropertyInfo, BatchPropertyResult } from '@shared/schema';
 import { MontanaApiService } from './montana-api-service';
 
 
@@ -48,6 +48,48 @@ export class GeocodeService {
     return propertyInfo;
   }
 
+  async getPropertiesInfoBatch(geocodes: string[]): Promise<BatchPropertyResult[]> {
+    console.log(`Processing batch of ${geocodes.length} geocodes...`);
+    
+    // Process all geocodes concurrently using Promise.allSettled to handle partial failures
+    const settledPromises = await Promise.allSettled(
+      geocodes.map(async (geocode): Promise<BatchPropertyResult> => {
+        try {
+          const propertyInfo = await this.getPropertyInfo(geocode);
+          return {
+            geocode,
+            success: true,
+            data: propertyInfo
+          };
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          console.warn(`Failed to process geocode ${geocode}:`, errorMessage);
+          return {
+            geocode,
+            success: false,
+            error: errorMessage
+          };
+        }
+      })
+    );
+
+    // Extract results from settled promises - all results will be BatchPropertyResult
+    const results: BatchPropertyResult[] = settledPromises.map(settledResult => {
+      if (settledResult.status === 'fulfilled') {
+        return settledResult.value;
+      } else {
+        // This should rarely happen since we handle errors in the inner try-catch
+        return {
+          geocode: 'unknown',
+          success: false,
+          error: `Promise rejected: ${settledResult.reason}`
+        };
+      }
+    });
+
+    console.log(`Batch processing complete: ${results.filter(r => r.success).length}/${results.length} successful`);
+    return results;
+  }
 
   private extractCountyFromAddress(address: string): string | undefined {
     // Common Montana counties - this is a simplified approach
