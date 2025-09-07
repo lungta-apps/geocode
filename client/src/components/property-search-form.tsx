@@ -12,8 +12,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Upload, FileText, CheckCircle, XCircle, List, Eye } from "lucide-react";
+import { Loader2, Upload, FileText, CheckCircle, XCircle, List, Eye, Download, RefreshCw, RotateCcw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
 
 interface PropertySearchFormProps {
   onSearch: (geocode: string) => void;
@@ -29,6 +30,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
   const [parsedGeocodes, setParsedGeocodes] = useState<string[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [retryingGeocodes, setRetryingGeocodes] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<GeocodeSearch>({
@@ -64,6 +66,48 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
       if (onBatchResults) {
         onBatchResults(errorResult);
       }
+    }
+  });
+
+  // Individual retry mutation
+  const retryMutation = useMutation({
+    mutationFn: async (geocodes: string[]): Promise<BatchApiResponse> => {
+      const response = await apiRequest('POST', '/api/property/batch-lookup', { geocodes });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      if (batchResults) {
+        // Update the batch results with the new retry results
+        const updatedResults = [...batchResults.results];
+        data.results.forEach(newResult => {
+          const existingIndex = updatedResults.findIndex(r => r.geocode === newResult.geocode);
+          if (existingIndex !== -1) {
+            updatedResults[existingIndex] = newResult;
+          }
+        });
+        
+        const successfulCount = updatedResults.filter(r => r.success).length;
+        const failedCount = updatedResults.filter(r => !r.success).length;
+        
+        const updatedBatchResults: BatchApiResponse = {
+          ...batchResults,
+          results: updatedResults,
+          totalSuccessful: successfulCount,
+          totalFailed: failedCount
+        };
+        
+        setBatchResults(updatedBatchResults);
+        if (onBatchResults) {
+          onBatchResults(updatedBatchResults);
+        }
+      }
+      
+      // Clear retry loading state
+      setRetryingGeocodes(new Set());
+    },
+    onError: (error) => {
+      console.error('Retry failed:', error);
+      setRetryingGeocodes(new Set());
     }
   });
 
@@ -103,6 +147,36 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
     }
     
     return Array.from(new Set(geocodes)); // Remove duplicates
+  };
+
+  // Export functions
+  const handleExportCSV = (includeFailedRows: boolean = true) => {
+    if (!batchResults) return;
+    
+    const csvContent = batchResultsToCSV(batchResults, {
+      includeFailedRows,
+      includeTimestamps: true,
+      includeMetadata: true
+    });
+    
+    const filename = generateCsvFilename('montana-property-batch');
+    downloadCSV(csvContent, filename);
+  };
+
+  // Retry functions
+  const handleRetryIndividual = (geocode: string) => {
+    setRetryingGeocodes(prev => new Set([...prev, geocode]));
+    retryMutation.mutate([geocode]);
+  };
+
+  const handleRetryAllFailed = () => {
+    if (!batchResults) return;
+    
+    const failedGeocodes = getFailedGeocodes(batchResults);
+    if (failedGeocodes.length === 0) return;
+    
+    setRetryingGeocodes(new Set(failedGeocodes));
+    retryMutation.mutate(failedGeocodes);
   };
 
   const validateFile = (file: File): { isValid: boolean; message?: string } => {
@@ -498,24 +572,99 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
                     </AlertDescription>
                   </Alert>
 
+                  {/* Export and Retry Actions */}
+                  {batchResults.success && batchResults.results.length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-3 bg-surface-variant rounded-lg">
+                      <Button
+                        onClick={() => handleExportCSV(true)}
+                        variant="secondary"
+                        size="sm"
+                        className="bg-blue-800 hover:bg-blue-700 text-blue-100"
+                        data-testid="button-export-all"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export All Results
+                      </Button>
+                      
+                      <Button
+                        onClick={() => handleExportCSV(false)}
+                        variant="secondary"
+                        size="sm"
+                        className="bg-green-800 hover:bg-green-700 text-green-100"
+                        data-testid="button-export-successful"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Successful Only
+                      </Button>
+
+                      {batchResults.totalFailed > 0 && (
+                        <Button
+                          onClick={handleRetryAllFailed}
+                          variant="secondary"
+                          size="sm"
+                          disabled={retryMutation.isPending}
+                          className="bg-orange-800 hover:bg-orange-700 text-orange-100 disabled:bg-gray-600"
+                          data-testid="button-retry-all-failed"
+                        >
+                          {retryMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                          )}
+                          Retry All Failed ({batchResults.totalFailed})
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
                   {batchResults.success && batchResults.results.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-on-surface">Results Summary:</h4>
                       <div className="max-h-40 overflow-y-auto space-y-1">
                         {batchResults.results.map((result, index) => (
                           <div key={index} className="flex items-center justify-between p-2 bg-surface-variant rounded text-xs">
-                            <span className="font-mono">{result.geocode}</span>
-                            {result.success ? (
-                              <div className="flex items-center space-x-1">
-                                <CheckCircle className="h-3 w-3 text-green-400" />
-                                <span className="text-green-400">Found</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-1">
-                                <XCircle className="h-3 w-3 text-red-400" />
-                                <span className="text-red-400">Error</span>
-                              </div>
-                            )}
+                            <div className="flex items-center space-x-2">
+                              <span className="font-mono">{result.geocode}</span>
+                              {result.processedAt && (
+                                <span className="text-gray-500 text-xs">
+                                  {new Date(result.processedAt).toLocaleTimeString()}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {result.success ? (
+                                <div className="flex items-center space-x-1">
+                                  <CheckCircle className="h-3 w-3 text-green-400" />
+                                  <span className="text-green-400">Found</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center space-x-2">
+                                  <div className="flex items-center space-x-1">
+                                    <XCircle className="h-3 w-3 text-red-400" />
+                                    <span className="text-red-400" title={result.error}>
+                                      {result.error && result.error.length > 20 
+                                        ? result.error.substring(0, 20) + '...' 
+                                        : result.error || 'Error'}
+                                    </span>
+                                  </div>
+                                  <Button
+                                    onClick={() => handleRetryIndividual(result.geocode)}
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={retryingGeocodes.has(result.geocode)}
+                                    className="h-6 w-6 p-0 hover:bg-orange-800/20"
+                                    data-testid={`button-retry-${result.geocode}`}
+                                    title="Retry this geocode"
+                                  >
+                                    {retryingGeocodes.has(result.geocode) ? (
+                                      <Loader2 className="h-3 w-3 animate-spin text-orange-400" />
+                                    ) : (
+                                      <RefreshCw className="h-3 w-3 text-orange-400" />
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
