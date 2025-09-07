@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { PropertySearchForm } from "@/components/property-search-form";
 import { PropertyResults } from "@/components/property-results";
+import { PropertyMap } from "@/components/property-map";
 import { ToastNotification } from "@/components/toast-notification";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { lookupProperty } from "@/lib/geocoding";
-import { PropertyInfo, ApiResponse } from "@shared/schema";
+import { PropertyInfo, ApiResponse, BatchApiResponse } from "@shared/schema";
 import { AlertCircle, RotateCcw, HelpCircle } from "lucide-react";
 
 interface ToastState {
@@ -17,8 +19,10 @@ interface ToastState {
 
 export default function Home() {
   const [propertyData, setPropertyData] = useState<PropertyInfo | null>(null);
+  const [batchPropertyData, setBatchPropertyData] = useState<PropertyInfo[]>([]);
   const [errorState, setErrorState] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ show: false, message: "", type: "info" });
+  const [isShowingBatch, setIsShowingBatch] = useState(false);
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
@@ -47,7 +51,44 @@ export default function Home() {
   };
 
   const handleSearch = (geocode: string) => {
+    // Clear batch results when doing single search
+    setBatchPropertyData([]);
+    setIsShowingBatch(false);
     searchMutation.mutate(geocode);
+  };
+  
+  const handleBatchResults = (batchResults: BatchApiResponse) => {
+    if (batchResults.success && batchResults.results.length > 0) {
+      // Extract successful property data from batch results
+      const successfulProperties = batchResults.results
+        .filter(result => result.success && result.data)
+        .map(result => result.data!);
+        
+      if (successfulProperties.length > 0) {
+        setBatchPropertyData(successfulProperties);
+        setPropertyData(null); // Clear single property data
+        setIsShowingBatch(true);
+        setErrorState(null);
+        
+        const total = batchResults.totalRequested;
+        const successful = batchResults.totalSuccessful;
+        const failed = batchResults.totalFailed;
+        
+        if (failed > 0) {
+          showToast(`Batch completed: ${successful}/${total} properties found successfully`, "info");
+        } else {
+          showToast(`All ${successful} properties loaded successfully!`, "success");
+        }
+      } else {
+        setBatchPropertyData([]);
+        setIsShowingBatch(false);
+        setErrorState('No properties found in the batch lookup');
+      }
+    } else {
+      setBatchPropertyData([]);
+      setIsShowingBatch(false);
+      setErrorState(batchResults.error || 'Batch lookup failed');
+    }
   };
 
   const handleCopyAddress = (address: string) => {
@@ -61,6 +102,8 @@ export default function Home() {
   const handleTryAgain = () => {
     setErrorState(null);
     setPropertyData(null);
+    setBatchPropertyData([]);
+    setIsShowingBatch(false);
   };
 
   return (
@@ -96,18 +139,60 @@ export default function Home() {
         {/* Search Section */}
         <div className="mb-8">
           <PropertySearchForm 
-            onSearch={handleSearch} 
+            onSearch={handleSearch}
+            onBatchResults={handleBatchResults}
             isLoading={searchMutation.isPending}
           />
         </div>
 
         {/* Results Section */}
-        {propertyData && !errorState && (
-          <PropertyResults 
-            property={propertyData}
-            onCopyAddress={handleCopyAddress}
-            onOpenInMaps={handleOpenInMaps}
-          />
+        {!errorState && (
+          <>
+            {/* Single Property Results */}
+            {propertyData && !isShowingBatch && (
+              <PropertyResults 
+                property={propertyData}
+                onCopyAddress={handleCopyAddress}
+                onOpenInMaps={handleOpenInMaps}
+              />
+            )}
+            
+            {/* Batch Property Results */}
+            {batchPropertyData.length > 0 && isShowingBatch && (
+              <section className="fade-in" aria-labelledby="batch-results-heading">
+                <div className="grid lg:grid-cols-1 gap-8">
+                  {/* Batch Summary Card */}
+                  <Card className="bg-surface border-gray-700 shadow-lg">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle 
+                            id="batch-results-heading" 
+                            className="text-xl font-semibold text-on-surface flex items-center space-x-2"
+                          >
+                            <span className="w-5 h-5 bg-green-500 rounded-full"></span>
+                            <span>Batch Lookup Results</span>
+                          </CardTitle>
+                          <p className="text-on-surface-variant mt-1">
+                            {batchPropertyData.length} {batchPropertyData.length === 1 ? 'property' : 'properties'} found and displayed on the map
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="bg-blue-800 text-blue-100">
+                          {batchPropertyData.length} Properties
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {/* Multi-Property Map */}
+                      <div className="w-full">
+                        <PropertyMap properties={batchPropertyData} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </section>
+            )}
+          </>
         )}
 
         {/* Error State */}
@@ -159,19 +244,23 @@ export default function Home() {
           <div className="space-y-4 text-on-surface-variant">
             <div className="flex items-start space-x-3">
               <span className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5">1</span>
-              <p>Enter a valid Montana property geocode in the search field above. Geocodes typically contain numbers and hyphens.</p>
+              <p><strong>Single Lookup:</strong> Enter a Montana property geocode in the search field, or <strong>Batch Lookup:</strong> copy/paste multiple geocodes or upload a CSV file.</p>
             </div>
             <div className="flex items-start space-x-3">
               <span className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5">2</span>
-              <p>Click "Search Property" to retrieve the physical address and location information from the Montana cadastral database.</p>
+              <p>Click "Search Property" or "Process Geocodes" to retrieve property information from the Montana cadastral database.</p>
             </div>
             <div className="flex items-start space-x-3">
               <span className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5">3</span>
-              <p>View the property details and explore the interactive map to see the exact location of the property.</p>
+              <p>View property details and explore the interactive map. Multiple properties will show with different colored markers and boundaries.</p>
             </div>
           </div>
           
           <div className="mt-6 pt-4 border-t border-gray-700">
+            <h4 className="text-sm font-semibold text-on-surface mb-2">Batch Processing</h4>
+            <p className="text-sm text-on-surface-variant mb-2">
+              For multiple properties, use the "Batch Upload" tab to copy/paste geocodes (one per line) or upload a CSV file with geocodes. Maximum 10 properties per batch.
+            </p>
             <h4 className="text-sm font-semibold text-on-surface mb-2">Need Help Finding a Geocode?</h4>
             <p className="text-sm text-on-surface-variant">
               Montana property geocodes can typically be found on property tax statements, deed documents, or by contacting your local county assessor's office.
