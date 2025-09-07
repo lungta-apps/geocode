@@ -23,21 +23,8 @@ interface PropertyWithColor extends PropertyInfo {
   colorIndex: number;
 }
 
-// Color palette for different properties
-const PROPERTY_COLORS = [
-  '#F44336', // Red
-  '#2196F3', // Blue  
-  '#4CAF50', // Green
-  '#FF9800', // Orange
-  '#9C27B0', // Purple
-  '#00BCD4', // Cyan
-  '#FFEB3B', // Yellow
-  '#795548', // Brown
-  '#607D8B', // Blue Grey
-  '#E91E63', // Pink
-  '#3F51B5', // Indigo
-  '#8BC34A', // Light Green
-];
+// Single blue color for all properties
+const PROPERTY_COLOR = '#2196F3'; // Nice blue
 
 // Performance constants
 const MAX_VISIBLE_PROPERTIES = 50;
@@ -112,7 +99,7 @@ function ZoomControls() {
 export const PropertyMap = memo(function PropertyMap({ properties }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   
-  // Memoized processing of properties with colors and performance optimizations
+  // Memoized processing of properties with single color and performance optimizations
   const propertiesWithColors: PropertyWithColor[] = useMemo(() => {
     const validProperties = properties.filter(p => p.lat && p.lng);
     
@@ -121,26 +108,19 @@ export const PropertyMap = memo(function PropertyMap({ properties }: PropertyMap
     
     return limitedProperties.map((property, index) => ({
       ...property,
-      color: PROPERTY_COLORS[index % PROPERTY_COLORS.length],
+      color: PROPERTY_COLOR, // All properties use the same blue color
       colorIndex: index
     }));
   }, [properties]);
 
-  // Memoized custom marker icon creation
-  const createCustomIcon = useMemo(() => {
-    const iconCache = new Map<string, L.DivIcon>();
-    
-    return (color: string) => {
-      if (!iconCache.has(color)) {
-        iconCache.set(color, L.divIcon({
-          className: 'custom-marker',
-          html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13]
-        }));
-      }
-      return iconCache.get(color)!;
-    };
+  // Single custom marker icon for all properties
+  const customIcon = useMemo(() => {
+    return L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="background-color: ${PROPERTY_COLOR}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [26, 26],
+      iconAnchor: [13, 13]
+    });
   }, []);
   
   // Memoized center point calculation for initial map positioning
@@ -203,10 +183,10 @@ export const PropertyMap = memo(function PropertyMap({ properties }: PropertyMap
               <Polygon
                 positions={property.parcelGeometry.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])}
                 pathOptions={{
-                  color: property.color,
+                  color: PROPERTY_COLOR,
                   weight: 2,
                   opacity: 1,
-                  fillColor: property.color,
+                  fillColor: PROPERTY_COLOR,
                   fillOpacity: 0.1
                 }}
               >
@@ -224,7 +204,7 @@ export const PropertyMap = memo(function PropertyMap({ properties }: PropertyMap
             {property.lat && property.lng && (
               <Marker 
                 position={[property.lat, property.lng]} 
-                icon={createCustomIcon(property.color)}
+                icon={customIcon}
               >
                 <Popup className="dark-popup">
                   <div className="text-gray-900 font-sans">
@@ -262,14 +242,14 @@ export const PropertyMap = memo(function PropertyMap({ properties }: PropertyMap
               <div className="flex items-center space-x-2">
                 <div 
                   className="w-3 h-3 rounded-full border border-white flex-shrink-0"
-                  style={{ backgroundColor: property.color }}
+                  style={{ backgroundColor: PROPERTY_COLOR }}
                 ></div>
                 {property.parcelGeometry && (
                   <div 
                     className="w-3 h-3 border-2 bg-opacity-10 flex-shrink-0"
                     style={{ 
-                      borderColor: property.color, 
-                      backgroundColor: property.color + '1A' // Add transparency
+                      borderColor: PROPERTY_COLOR, 
+                      backgroundColor: PROPERTY_COLOR + '1A' // Add transparency
                     }}
                   ></div>
                 )}
@@ -285,12 +265,21 @@ export const PropertyMap = memo(function PropertyMap({ properties }: PropertyMap
         {propertiesWithColors.length > 0 && (
           <div className="flex items-center space-x-4 text-xs text-on-surface-variant pt-2 border-t border-gray-600">
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-gray-400 rounded-full border border-white"></div>
+              <div 
+                className="w-2 h-2 rounded-full border border-white"
+                style={{ backgroundColor: PROPERTY_COLOR }}
+              ></div>
               <span>Property Center</span>
             </div>
             {propertiesWithColors.some(p => p.parcelGeometry) && (
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 border border-gray-400 bg-gray-400 bg-opacity-10"></div>
+                <div 
+                  className="w-2 h-2 border-2 bg-opacity-10"
+                  style={{ 
+                    borderColor: PROPERTY_COLOR, 
+                    backgroundColor: PROPERTY_COLOR + '1A'
+                  }}
+                ></div>
                 <span>Parcel Boundary</span>
               </div>
             )}
