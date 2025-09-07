@@ -165,7 +165,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
 
   // Retry functions
   const handleRetryIndividual = (geocode: string) => {
-    setRetryingGeocodes(prev => new Set([...prev, geocode]));
+    setRetryingGeocodes(prev => new Set([...Array.from(prev), geocode]));
     retryMutation.mutate([geocode]);
   };
 
