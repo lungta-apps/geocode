@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Upload, FileText, CheckCircle, XCircle, List, Eye, Download, RefreshCw, RotateCcw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
+import { BatchProgress } from "@/components/batch-progress";
 
 interface PropertySearchFormProps {
   onSearch: (geocode: string) => void;
@@ -31,6 +32,8 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
   const [showPreview, setShowPreview] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [retryingGeocodes, setRetryingGeocodes] = useState<Set<string>>(new Set());
+  const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
+  const [showProgressTracker, setShowProgressTracker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<GeocodeSearch>({
@@ -48,12 +51,16 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
     },
     onSuccess: (data) => {
       setBatchResults(data);
+      setActiveBatchId(null);
+      setShowProgressTracker(false);
       if (onBatchResults) {
         onBatchResults(data);
       }
     },
     onError: (error) => {
       console.error('Batch upload failed:', error);
+      setActiveBatchId(null);
+      setShowProgressTracker(false);
       const errorResult = {
         success: false,
         results: [],
@@ -108,6 +115,8 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
     onError: (error) => {
       console.error('Retry failed:', error);
       setRetryingGeocodes(new Set());
+      setActiveBatchId(null);
+      setShowProgressTracker(false);
     }
   });
 
@@ -175,6 +184,11 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
     const failedGeocodes = getFailedGeocodes(batchResults);
     if (failedGeocodes.length === 0) return;
     
+    // Start progress tracking for retry
+    const newBatchId = `retry_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    setActiveBatchId(newBatchId);
+    setShowProgressTracker(true);
+    
     setRetryingGeocodes(new Set(failedGeocodes));
     retryMutation.mutate(failedGeocodes);
   };
@@ -230,6 +244,11 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
         return;
       }
       
+      // Start progress tracking
+      const newBatchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+      setActiveBatchId(newBatchId);
+      setShowProgressTracker(true);
+      
       batchMutation.mutate(geocodes);
     } catch (error) {
       setFileValidation({ isValid: false, message: 'Failed to read the file' });
@@ -260,6 +279,12 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
     }
     
     setFileValidation(null);
+    
+    // Start progress tracking
+    const newBatchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    setActiveBatchId(newBatchId);
+    setShowProgressTracker(true);
+    
     batchMutation.mutate(parsedGeocodes);
   };
 
@@ -677,5 +702,21 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
         </Tabs>
       </CardContent>
     </Card>
+    
+    {/* Real-time Progress Tracker */}
+    {showProgressTracker && activeBatchId && (
+      <BatchProgress
+        batchId={activeBatchId}
+        initialTotal={parsedGeocodes.length || (selectedFile ? 1 : 0)}
+        onCancel={() => {
+          setShowProgressTracker(false);
+          setActiveBatchId(null);
+        }}
+        onComplete={() => {
+          setShowProgressTracker(false);
+          setActiveBatchId(null);
+        }}
+      />
+    )}
   );
 }
