@@ -331,6 +331,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
   };
 
   return (
+    <>
     <Card className="bg-surface border-gray-700 shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-on-surface">
@@ -706,7 +707,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
     {/* Real-time Progress Tracker */}
     {showProgressTracker && activeBatchId && (
       <BatchProgress
-        batchId={activeBatchId}
+        batchId={activeBatchId!}
         initialTotal={parsedGeocodes.length || (selectedFile ? 1 : 0)}
         onCancel={() => {
           setShowProgressTracker(false);
@@ -718,5 +719,6 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
         }}
       />
     )}
+    </>
   );
 }

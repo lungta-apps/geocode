@@ -20,6 +20,10 @@ This is a full-stack web application that allows users to look up Montana proper
 - **Individual and Batch Retry**: Users can retry individual failed geocodes or retry all failed geocodes at once with real-time status updates
 - **Enhanced Metadata Tracking**: Backend now includes batch IDs, processing timestamps, and detailed timing information for audit trails
 - **Unified Blue Color Scheme**: Simplified map display to use single blue color (#2196F3) for all properties while maintaining multi-property functionality
+- **Real-time Progress Tracking**: Implemented WebSocket-based progress updates with live batch processing status, ETA calculations, and processing rates
+- **Enhanced UX Polish**: Added smooth animations, real-time progress indicators, rate limiting for large batches, and polished loading states
+- **Advanced Queue Management**: Implemented sequential processing with rate limiting (100ms delays for large batches) and intelligent time estimation
+- **Interactive Progress Display**: Fixed-position progress tracker with real-time statistics, connection status, and dismissible interface
 - **Backward Compatibility**: Maintained single-property support while enabling multi-property display capabilities
 
 ## Previous Changes (September 4, 2025)
