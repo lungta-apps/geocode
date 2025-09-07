@@ -4,7 +4,15 @@
 
 This is a full-stack web application that allows users to look up Montana property information using geocodes. Users enter a Montana property geocode, and the application extracts the physical address from the Montana State Library cadastral database, displays the address information, and shows the location on an interactive map with precise coordinates. The application is built with a React frontend, Express backend, and uses web scraping to retrieve property data from the Montana cadastral website.
 
-## Recent Changes (September 4, 2025)
+## Recent Changes (September 7, 2025)
+- **Multi-Property Map Enhancement**: Extended PropertyMap component to display multiple properties simultaneously with different colored markers and polygons
+- **Dynamic Color Coding**: Implemented 12-color palette system that automatically assigns unique colors to each property for easy identification
+- **Enhanced Interactive Legend**: Updated map legend to show individual property information with geocodes, addresses, and color-coded indicators
+- **Auto-Fit Bounds Optimization**: Map automatically calculates and fits bounds to display all properties with appropriate padding
+- **Performance Optimizations**: Added React.memo, useMemo, icon caching, polygon simplification, and 50-property limit for optimal rendering performance
+- **Backward Compatibility**: Maintained single-property support while enabling multi-property display capabilities
+
+## Previous Changes (September 4, 2025)
 - **Deployment Compatibility Fixes**: Resolved deployment initialization failures by removing unused session dependencies
 - **Enhanced Server Error Handling**: Added comprehensive startup error handling with detailed logging and graceful error recovery
 - **Process Error Handlers**: Implemented uncaught exception and unhandled rejection handlers to prevent silent crashes
