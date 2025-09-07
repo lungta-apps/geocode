@@ -15,28 +15,65 @@ L.Icon.Default.mergeOptions({
 });
 
 interface PropertyMapProps {
-  lat: number;
-  lng: number;
-  address: string;
-  parcelGeometry?: PropertyInfo['parcelGeometry'];
+  properties: PropertyInfo[];
 }
 
-function MapController({ lat, lng, parcelGeometry }: { lat: number; lng: number; parcelGeometry?: PropertyInfo['parcelGeometry'] }) {
+interface PropertyWithColor extends PropertyInfo {
+  color: string;
+  colorIndex: number;
+}
+
+// Color palette for different properties
+const PROPERTY_COLORS = [
+  '#F44336', // Red
+  '#2196F3', // Blue  
+  '#4CAF50', // Green
+  '#FF9800', // Orange
+  '#9C27B0', // Purple
+  '#00BCD4', // Cyan
+  '#FFEB3B', // Yellow
+  '#795548', // Brown
+  '#607D8B', // Blue Grey
+  '#E91E63', // Pink
+  '#3F51B5', // Indigo
+  '#8BC34A', // Light Green
+];
+
+function MapController({ properties }: { properties: PropertyInfo[] }) {
   const map = useMap();
   
   useEffect(() => {
-    if (parcelGeometry && parcelGeometry.coordinates && parcelGeometry.coordinates.length > 0) {
-      // Calculate bounds of the polygon and fit map to it
-      const outerRing = parcelGeometry.coordinates[0];
-      const bounds = new L.LatLngBounds(
-        outerRing.map(([lng, lat]) => [lat, lng] as [number, number])
-      );
-      map.fitBounds(bounds, { padding: [20, 20] });
-    } else {
-      // Fallback to center point
-      map.setView([lat, lng], 15);
+    if (properties.length === 0) return;
+
+    // Collect all coordinates for bounds calculation
+    const allCoordinates: [number, number][] = [];
+    
+    properties.forEach(property => {
+      // Add center point coordinates
+      if (property.lat && property.lng) {
+        allCoordinates.push([property.lat, property.lng]);
+      }
+      
+      // Add polygon coordinates if available
+      if (property.parcelGeometry?.coordinates) {
+        const outerRing = property.parcelGeometry.coordinates[0];
+        outerRing.forEach(([lng, lat]) => {
+          allCoordinates.push([lat, lng]);
+        });
+      }
+    });
+
+    if (allCoordinates.length > 0) {
+      if (allCoordinates.length === 1) {
+        // Single point - center on it
+        map.setView(allCoordinates[0], 15);
+      } else {
+        // Multiple points - fit bounds to show all
+        const bounds = new L.LatLngBounds(allCoordinates);
+        map.fitBounds(bounds, { padding: [30, 30] });
+      }
     }
-  }, [map, lat, lng, parcelGeometry]);
+  }, [map, properties]);
 
   return null;
 }
@@ -68,27 +105,46 @@ function ZoomControls() {
   );
 }
 
-export function PropertyMap({ lat, lng, address, parcelGeometry }: PropertyMapProps) {
+export function PropertyMap({ properties }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
+  
+  // Add colors to properties
+  const propertiesWithColors: PropertyWithColor[] = properties
+    .filter(p => p.lat && p.lng) // Only include properties with valid coordinates
+    .map((property, index) => ({
+      ...property,
+      color: PROPERTY_COLORS[index % PROPERTY_COLORS.length],
+      colorIndex: index
+    }));
 
-  // Custom marker icon for better visibility on dark theme
-  const customIcon = L.divIcon({
-    className: 'custom-marker',
-    html: '<div style="background-color: #F44336; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
-    iconSize: [26, 26],
-    iconAnchor: [13, 13]
-  });
+  // Create custom marker icon with specific color
+  const createCustomIcon = (color: string) => {
+    return L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+      iconSize: [26, 26],
+      iconAnchor: [13, 13]
+    });
+  };
+  
+  // Calculate center point for initial map positioning
+  const centerLat = propertiesWithColors.length > 0 
+    ? propertiesWithColors.reduce((sum, p) => sum + (p.lat || 0), 0) / propertiesWithColors.length
+    : 45.7833; // Montana center as fallback
+  const centerLng = propertiesWithColors.length > 0
+    ? propertiesWithColors.reduce((sum, p) => sum + (p.lng || 0), 0) / propertiesWithColors.length
+    : -110.5; // Montana center as fallback
 
   return (
     <div className="relative">
       <div
         role="img"
-        aria-label="Interactive map showing property location"
+        aria-label={`Interactive map showing ${propertiesWithColors.length} ${propertiesWithColors.length === 1 ? 'property' : 'properties'}`}
         data-testid="map-container"
       >
         <MapContainer
-          center={[lat, lng]}
-          zoom={15}
+          center={[centerLat, centerLng]}
+          zoom={propertiesWithColors.length === 1 ? 15 : 10}
           className="w-full h-80 rounded-lg border border-gray-600 leaflet-dark-theme"
           zoomControl={false}
           ref={mapRef}
@@ -99,53 +155,103 @@ export function PropertyMap({ lat, lng, address, parcelGeometry }: PropertyMapPr
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={20}
         />
-        {/* Render parcel polygon if geometry is available */}
-        {parcelGeometry && parcelGeometry.coordinates && (
-          <Polygon
-            positions={parcelGeometry.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])}
-            pathOptions={{
-              color: '#F44336',
-              weight: 2,
-              opacity: 1,
-              fillColor: '#F44336',
-              fillOpacity: 0.1
-            }}
-          >
-            <Popup className="dark-popup">
-              <div className="text-gray-900 font-sans">
-                <strong className="text-primary block mb-1">Property Parcel</strong>
-                <span className="text-sm">{address}</span>
-              </div>
-            </Popup>
-          </Polygon>
-        )}
         
-        {/* Center point marker */}
-        <Marker position={[lat, lng]} icon={customIcon}>
-          <Popup className="dark-popup">
-            <div className="text-gray-900 font-sans">
-              <strong className="text-primary block mb-1">Property Center</strong>
-              <span className="text-sm">{address}</span>
-            </div>
-          </Popup>
-        </Marker>
-          <MapController lat={lat} lng={lng} parcelGeometry={parcelGeometry} />
+        {/* Render all properties */}
+        {propertiesWithColors.map((property) => (
+          <div key={`property-${property.geocode}-${property.colorIndex}`}>
+            {/* Render parcel polygon if geometry is available */}
+            {property.parcelGeometry?.coordinates && (
+              <Polygon
+                positions={property.parcelGeometry.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])}
+                pathOptions={{
+                  color: property.color,
+                  weight: 2,
+                  opacity: 1,
+                  fillColor: property.color,
+                  fillOpacity: 0.1
+                }}
+              >
+                <Popup className="dark-popup">
+                  <div className="text-gray-900 font-sans">
+                    <strong className="text-primary block mb-1">Property Parcel</strong>
+                    <div className="text-sm font-medium mb-1">{property.geocode}</div>
+                    <span className="text-sm">{property.address}</span>
+                  </div>
+                </Popup>
+              </Polygon>
+            )}
+            
+            {/* Center point marker */}
+            {property.lat && property.lng && (
+              <Marker 
+                position={[property.lat, property.lng]} 
+                icon={createCustomIcon(property.color)}
+              >
+                <Popup className="dark-popup">
+                  <div className="text-gray-900 font-sans">
+                    <strong className="text-primary block mb-1">Property Center</strong>
+                    <div className="text-sm font-medium mb-1">{property.geocode}</div>
+                    <span className="text-sm">{property.address}</span>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
+          </div>
+        ))}
+        
+          <MapController properties={propertiesWithColors} />
           <ZoomControls />
         </MapContainer>
       </div>
       
-      {/* Map Legend */}
-      <div className="mt-4 flex items-center space-x-4 text-sm text-on-surface-variant">
-        {parcelGeometry && (
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 border-2 border-red-500 bg-red-500 bg-opacity-10"></div>
-            <span>Parcel Boundary</span>
+      {/* Enhanced Map Legend */}
+      <div className="mt-4 space-y-3">
+        {propertiesWithColors.length > 1 && (
+          <div className="text-sm font-medium text-on-surface mb-2">
+            Properties ({propertiesWithColors.length})
           </div>
         )}
-        <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-red-500 rounded-full border border-white"></div>
-          <span>{parcelGeometry ? 'Property Center' : 'Property Location'}</span>
+        
+        <div className="grid grid-cols-1 gap-2 text-sm text-on-surface-variant max-h-32 overflow-y-auto">
+          {propertiesWithColors.map((property) => (
+            <div key={`legend-${property.geocode}-${property.colorIndex}`} className="flex items-center space-x-3 p-2 rounded bg-surface-variant/20">
+              <div className="flex items-center space-x-2">
+                <div 
+                  className="w-3 h-3 rounded-full border border-white flex-shrink-0"
+                  style={{ backgroundColor: property.color }}
+                ></div>
+                {property.parcelGeometry && (
+                  <div 
+                    className="w-3 h-3 border-2 bg-opacity-10 flex-shrink-0"
+                    style={{ 
+                      borderColor: property.color, 
+                      backgroundColor: property.color + '1A' // Add transparency
+                    }}
+                  ></div>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-medium text-xs text-on-surface">{property.geocode}</div>
+                <div className="text-xs truncate" title={property.address}>{property.address}</div>
+              </div>
+            </div>
+          ))}
         </div>
+        
+        {propertiesWithColors.length > 0 && (
+          <div className="flex items-center space-x-4 text-xs text-on-surface-variant pt-2 border-t border-gray-600">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-gray-400 rounded-full border border-white"></div>
+              <span>Property Center</span>
+            </div>
+            {propertiesWithColors.some(p => p.parcelGeometry) && (
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 border border-gray-400 bg-gray-400 bg-opacity-10"></div>
+                <span>Parcel Boundary</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
