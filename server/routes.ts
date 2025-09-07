@@ -38,6 +38,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/property/batch-lookup", async (req, res) => {
+    const startedAt = new Date().toISOString();
+    const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    
     try {
       const validation = batchGeocodeSearchSchema.safeParse(req.body);
       
@@ -54,13 +57,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const successfulResults = results.filter(r => r.success);
       const failedResults = results.filter(r => !r.success);
+      const completedAt = new Date().toISOString();
       
       const response = {
         success: true,
         results,
         totalRequested: geocodes.length,
         totalSuccessful: successfulResults.length,
-        totalFailed: failedResults.length
+        totalFailed: failedResults.length,
+        batchId,
+        startedAt,
+        completedAt
       };
 
       console.log(`Batch lookup completed: ${successfulResults.length}/${geocodes.length} successful`);
@@ -74,7 +81,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalRequested: 0,
         totalSuccessful: 0,
         totalFailed: 0,
-        error: errorMessage
+        error: errorMessage,
+        batchId,
+        startedAt,
+        completedAt: new Date().toISOString()
       });
     }
   });

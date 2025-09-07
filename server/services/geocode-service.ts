@@ -54,12 +54,14 @@ export class GeocodeService {
     // Process all geocodes concurrently using Promise.allSettled to handle partial failures
     const settledPromises = await Promise.allSettled(
       geocodes.map(async (geocode): Promise<BatchPropertyResult> => {
+        const processedAt = new Date().toISOString();
         try {
           const propertyInfo = await this.getPropertyInfo(geocode);
           return {
             geocode,
             success: true,
-            data: propertyInfo
+            data: propertyInfo,
+            processedAt
           };
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -67,7 +69,8 @@ export class GeocodeService {
           return {
             geocode,
             success: false,
-            error: errorMessage
+            error: errorMessage,
+            processedAt
           };
         }
       })
@@ -82,7 +85,8 @@ export class GeocodeService {
         return {
           geocode: 'unknown',
           success: false,
-          error: `Promise rejected: ${settledResult.reason}`
+          error: `Promise rejected: ${settledResult.reason}`,
+          processedAt: new Date().toISOString()
         };
       }
     });

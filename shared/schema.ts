@@ -43,7 +43,8 @@ export const batchPropertyResultSchema = z.object({
   geocode: z.string(),
   success: z.boolean(),
   data: propertyInfoSchema.optional(),
-  error: z.string().optional()
+  error: z.string().optional(),
+  processedAt: z.string().optional() // ISO timestamp
 });
 
 export const apiResponseSchema = z.object({
@@ -59,7 +60,10 @@ export const batchApiResponseSchema = z.object({
   totalRequested: z.number(),
   totalSuccessful: z.number(),
   totalFailed: z.number(),
-  error: z.string().optional() // For overall batch errors
+  error: z.string().optional(), // For overall batch errors
+  batchId: z.string().optional(), // Unique identifier for this batch
+  startedAt: z.string().optional(), // ISO timestamp when batch started
+  completedAt: z.string().optional() // ISO timestamp when batch completed
 });
 
 export type BatchPropertyResult = z.infer<typeof batchPropertyResultSchema>;
