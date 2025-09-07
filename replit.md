@@ -15,6 +15,11 @@ This is a full-stack web application that allows users to look up Montana proper
 - **Comprehensive Input Parsing**: Smart parsing handles both plain text lists and CSV formats with header detection and duplicate removal
 - **Real-time Preview**: Shows detected geocodes with count before processing, including validation warnings for limits
 - **Integrated Results Display**: Batch results automatically display on the enhanced multi-property map with color-coded properties
+- **Export and Retry Features**: Added CSV export functionality, individual retry buttons for failed geocodes, and "retry all failed" batch option
+- **Comprehensive CSV Export**: Export includes timestamps, processing metadata, batch statistics, and configurable options for successful vs failed results
+- **Individual and Batch Retry**: Users can retry individual failed geocodes or retry all failed geocodes at once with real-time status updates
+- **Enhanced Metadata Tracking**: Backend now includes batch IDs, processing timestamps, and detailed timing information for audit trails
+- **Unified Blue Color Scheme**: Simplified map display to use single blue color (#2196F3) for all properties while maintaining multi-property functionality
 - **Backward Compatibility**: Maintained single-property support while enabling multi-property display capabilities
 
 ## Previous Changes (September 4, 2025)
