@@ -1,10 +1,76 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { GeocodeService } from "./services/geocode-service";
 import { geocodeSearchSchema, apiResponseSchema, batchGeocodeSearchSchema, batchApiResponseSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const geocodeService = new GeocodeService();
+  
+  // Create HTTP server
+  const server = createServer(app);
+  
+  // Create WebSocket server on distinct path to avoid conflicts with Vite's HMR websocket
+  const wss = new WebSocketServer({ server: server, path: '/ws' });
+  
+  // Store active WebSocket connections by batch ID
+  const batchConnections = new Map<string, Set<WebSocket>>();
+  
+  // WebSocket connection handler
+  wss.on('connection', (ws: WebSocket, req) => {
+    console.log('WebSocket connection established');
+    
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        if (message.type === 'subscribe_batch' && message.batchId) {
+          // Subscribe to batch progress updates
+          if (!batchConnections.has(message.batchId)) {
+            batchConnections.set(message.batchId, new Set());
+          }
+          batchConnections.get(message.batchId)!.add(ws);
+          
+          console.log(`WebSocket subscribed to batch: ${message.batchId}`);
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      // Remove from all batch subscriptions
+      for (const [batchId, connections] of Array.from(batchConnections.entries())) {
+        connections.delete(ws);
+        if (connections.size === 0) {
+          batchConnections.delete(batchId);
+        }
+      }
+      console.log('WebSocket connection closed');
+    });
+    
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+    });
+  });
+  
+  // Helper function to broadcast progress updates
+  function broadcastProgress(batchId: string, progressData: any) {
+    const connections = batchConnections.get(batchId);
+    if (!connections) return;
+    
+    const message = JSON.stringify({
+      type: 'batch_progress',
+      batchId,
+      ...progressData
+    });
+    
+    for (const ws of Array.from(connections)) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(message);
+      }
+    }
+  }
 
   app.post("/api/property/lookup", async (req, res) => {
     try {
@@ -53,11 +119,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { geocodes } = validation.data;
       
-      const results = await geocodeService.getPropertiesInfoBatch(geocodes);
+      // Send initial progress update
+      broadcastProgress(batchId, {
+        status: 'started',
+        totalGeocodes: geocodes.length,
+        processedCount: 0,
+        successCount: 0,
+        failedCount: 0,
+        currentGeocode: null,
+        estimatedTimeRemaining: null,
+        startedAt
+      });
+      
+      // Process with progress updates
+      const results = await geocodeService.getPropertiesInfoBatchWithProgress(
+        geocodes, 
+        batchId,
+        (progress) => broadcastProgress(batchId, progress)
+      );
       
       const successfulResults = results.filter(r => r.success);
       const failedResults = results.filter(r => !r.success);
       const completedAt = new Date().toISOString();
+      
+      // Send completion progress update
+      broadcastProgress(batchId, {
+        status: 'completed',
+        totalGeocodes: geocodes.length,
+        processedCount: geocodes.length,
+        successCount: successfulResults.length,
+        failedCount: failedResults.length,
+        currentGeocode: null,
+        estimatedTimeRemaining: 0,
+        completedAt
+      });
       
       const response = {
         success: true,
@@ -74,6 +169,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Send error progress update
+      broadcastProgress(batchId, {
+        status: 'error',
+        error: errorMessage
+      });
       
       res.status(500).json({
         success: false,
@@ -101,6 +202,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  return server;
 }

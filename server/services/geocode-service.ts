@@ -95,6 +95,80 @@ export class GeocodeService {
     return results;
   }
 
+  async getPropertiesInfoBatchWithProgress(
+    geocodes: string[], 
+    batchId: string,
+    onProgress: (progress: any) => void
+  ): Promise<BatchPropertyResult[]> {
+    console.log(`Processing batch ${batchId} with ${geocodes.length} geocodes...`);
+    
+    const results: BatchPropertyResult[] = [];
+    const startTime = Date.now();
+    let totalProcessingTime = 0;
+    
+    // Process geocodes sequentially with rate limiting for large batches
+    const isLargeBatch = geocodes.length > 5;
+    const delayBetweenRequests = isLargeBatch ? 100 : 0; // 100ms delay for large batches
+    
+    for (let i = 0; i < geocodes.length; i++) {
+      const geocode = geocodes[i];
+      const itemStartTime = Date.now();
+      
+      try {
+        const propertyInfo = await this.getPropertyInfo(geocode);
+        const processedAt = new Date().toISOString();
+        
+        results.push({
+          geocode,
+          success: true,
+          data: propertyInfo,
+          processedAt
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        console.warn(`Failed to process geocode ${geocode}:`, errorMessage);
+        
+        results.push({
+          geocode,
+          success: false,
+          error: errorMessage,
+          processedAt: new Date().toISOString()
+        });
+      }
+      
+      // Calculate timing metrics
+      const itemProcessingTime = Date.now() - itemStartTime;
+      totalProcessingTime += itemProcessingTime;
+      const averageProcessingTime = totalProcessingTime / (i + 1);
+      const remainingItems = geocodes.length - (i + 1);
+      const estimatedTimeRemaining = Math.round((remainingItems * averageProcessingTime) / 1000); // in seconds
+      
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.filter(r => !r.success).length;
+      
+      // Send progress update
+      onProgress({
+        status: 'processing',
+        totalGeocodes: geocodes.length,
+        processedCount: i + 1,
+        successCount,
+        failedCount,
+        currentGeocode: geocode,
+        estimatedTimeRemaining,
+        processingRate: Math.round(60000 / averageProcessingTime), // items per minute
+        elapsedTime: Math.round((Date.now() - startTime) / 1000) // seconds
+      });
+      
+      // Rate limiting for large batches
+      if (delayBetweenRequests > 0 && i < geocodes.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, delayBetweenRequests));
+      }
+    }
+    
+    console.log(`Batch ${batchId} processing complete: ${results.filter(r => r.success).length}/${results.length} successful`);
+    return results;
+  }
+
   private extractCountyFromAddress(address: string): string | undefined {
     // Common Montana counties - this is a simplified approach
     const counties = [
