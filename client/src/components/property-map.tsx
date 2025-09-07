@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo, memo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -38,6 +38,10 @@ const PROPERTY_COLORS = [
   '#3F51B5', // Indigo
   '#8BC34A', // Light Green
 ];
+
+// Performance constants
+const MAX_VISIBLE_PROPERTIES = 50;
+const POLYGON_SIMPLIFICATION_TOLERANCE = 0.0001;
 
 function MapController({ properties }: { properties: PropertyInfo[] }) {
   const map = useMap();
@@ -105,35 +109,70 @@ function ZoomControls() {
   );
 }
 
-export function PropertyMap({ properties }: PropertyMapProps) {
+export const PropertyMap = memo(function PropertyMap({ properties }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   
-  // Add colors to properties
-  const propertiesWithColors: PropertyWithColor[] = properties
-    .filter(p => p.lat && p.lng) // Only include properties with valid coordinates
-    .map((property, index) => ({
+  // Memoized processing of properties with colors and performance optimizations
+  const propertiesWithColors: PropertyWithColor[] = useMemo(() => {
+    const validProperties = properties.filter(p => p.lat && p.lng);
+    
+    // Limit visible properties for performance
+    const limitedProperties = validProperties.slice(0, MAX_VISIBLE_PROPERTIES);
+    
+    return limitedProperties.map((property, index) => ({
       ...property,
       color: PROPERTY_COLORS[index % PROPERTY_COLORS.length],
       colorIndex: index
     }));
+  }, [properties]);
 
-  // Create custom marker icon with specific color
-  const createCustomIcon = (color: string) => {
-    return L.divIcon({
-      className: 'custom-marker',
-      html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [26, 26],
-      iconAnchor: [13, 13]
-    });
-  };
+  // Memoized custom marker icon creation
+  const createCustomIcon = useMemo(() => {
+    const iconCache = new Map<string, L.DivIcon>();
+    
+    return (color: string) => {
+      if (!iconCache.has(color)) {
+        iconCache.set(color, L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
+        }));
+      }
+      return iconCache.get(color)!;
+    };
+  }, []);
   
-  // Calculate center point for initial map positioning
-  const centerLat = propertiesWithColors.length > 0 
-    ? propertiesWithColors.reduce((sum, p) => sum + (p.lat || 0), 0) / propertiesWithColors.length
-    : 45.7833; // Montana center as fallback
-  const centerLng = propertiesWithColors.length > 0
-    ? propertiesWithColors.reduce((sum, p) => sum + (p.lng || 0), 0) / propertiesWithColors.length
-    : -110.5; // Montana center as fallback
+  // Memoized center point calculation for initial map positioning
+  const { centerLat, centerLng } = useMemo(() => {
+    if (propertiesWithColors.length === 0) {
+      return { centerLat: 45.7833, centerLng: -110.5 }; // Montana center as fallback
+    }
+    
+    const totalLat = propertiesWithColors.reduce((sum, p) => sum + (p.lat || 0), 0);
+    const totalLng = propertiesWithColors.reduce((sum, p) => sum + (p.lng || 0), 0);
+    
+    return {
+      centerLat: totalLat / propertiesWithColors.length,
+      centerLng: totalLng / propertiesWithColors.length
+    };
+  }, [propertiesWithColors]);
+  
+  // Simplified polygon coordinates for performance
+  const simplifyPolygonCoordinates = useMemo(() => {
+    return (coordinates: [number, number][]): [number, number][] => {
+      if (coordinates.length <= 10) return coordinates; // Don't simplify small polygons
+      
+      // Simple Douglas-Peucker-like simplification
+      const simplified: [number, number][] = [coordinates[0]];
+      for (let i = 2; i < coordinates.length - 1; i += 2) {
+        simplified.push(coordinates[i]);
+      }
+      simplified.push(coordinates[coordinates.length - 1]);
+      
+      return simplified;
+    };
+  }, []);
 
   return (
     <div className="relative">
@@ -208,7 +247,12 @@ export function PropertyMap({ properties }: PropertyMapProps) {
       <div className="mt-4 space-y-3">
         {propertiesWithColors.length > 1 && (
           <div className="text-sm font-medium text-on-surface mb-2">
-            Properties ({propertiesWithColors.length})
+            Properties ({propertiesWithColors.length}{properties.length > MAX_VISIBLE_PROPERTIES ? ` of ${properties.length}` : ''})
+            {properties.length > MAX_VISIBLE_PROPERTIES && (
+              <span className="text-xs text-on-surface-variant ml-2">
+                Showing first {MAX_VISIBLE_PROPERTIES} for performance
+              </span>
+            )}
           </div>
         )}
         
@@ -255,4 +299,7 @@ export function PropertyMap({ properties }: PropertyMapProps) {
       </div>
     </div>
   );
-}
+});
+
+// Set display name for debugging
+PropertyMap.displayName = 'PropertyMap';
