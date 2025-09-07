@@ -10,6 +10,11 @@ This is a full-stack web application that allows users to look up Montana proper
 - **Enhanced Interactive Legend**: Updated map legend to show individual property information with geocodes, addresses, and color-coded indicators
 - **Auto-Fit Bounds Optimization**: Map automatically calculates and fits bounds to display all properties with appropriate padding
 - **Performance Optimizations**: Added React.memo, useMemo, icon caching, polygon simplification, and 50-property limit for optimal rendering performance
+- **Enhanced Input Options**: Added textarea for copy/paste geocode lists, drag & drop CSV file upload, input validation and geocode preview
+- **Batch Processing Interface**: Implemented tab-based interface allowing users to mix single geocode and batch processing modes
+- **Comprehensive Input Parsing**: Smart parsing handles both plain text lists and CSV formats with header detection and duplicate removal
+- **Real-time Preview**: Shows detected geocodes with count before processing, including validation warnings for limits
+- **Integrated Results Display**: Batch results automatically display on the enhanced multi-property map with color-coded properties
 - **Backward Compatibility**: Maintained single-property support while enabling multi-property display capabilities
 
 ## Previous Changes (September 4, 2025)
