@@ -6,23 +6,29 @@ import { geocodeSearchSchema, GeocodeSearch, BatchApiResponse } from "@shared/sc
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Upload, FileText, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Upload, FileText, CheckCircle, XCircle, List, Eye } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface PropertySearchFormProps {
   onSearch: (geocode: string) => void;
+  onBatchResults?: (results: BatchApiResponse) => void;
   isLoading: boolean;
 }
 
-export function PropertySearchForm({ onSearch, isLoading }: PropertySearchFormProps) {
+export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: PropertySearchFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileValidation, setFileValidation] = useState<{ isValid: boolean; message?: string } | null>(null);
   const [batchResults, setBatchResults] = useState<BatchApiResponse | null>(null);
+  const [batchInput, setBatchInput] = useState('');
+  const [parsedGeocodes, setParsedGeocodes] = useState<string[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<GeocodeSearch>({
@@ -40,17 +46,24 @@ export function PropertySearchForm({ onSearch, isLoading }: PropertySearchFormPr
     },
     onSuccess: (data) => {
       setBatchResults(data);
+      if (onBatchResults) {
+        onBatchResults(data);
+      }
     },
     onError: (error) => {
       console.error('Batch upload failed:', error);
-      setBatchResults({
+      const errorResult = {
         success: false,
         results: [],
         totalRequested: 0,
         totalSuccessful: 0,
         totalFailed: 0,
         error: error instanceof Error ? error.message : 'Upload failed'
-      });
+      };
+      setBatchResults(errorResult);
+      if (onBatchResults) {
+        onBatchResults(errorResult);
+      }
     }
   });
 
@@ -64,24 +77,27 @@ export function PropertySearchForm({ onSearch, isLoading }: PropertySearchFormPr
     form.setValue('geocode', formatted);
   };
 
-  const parseCSV = (text: string): string[] => {
+  const parseTextInput = (text: string): string[] => {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line);
     const geocodes: string[] = [];
     
     for (const line of lines) {
-      // Handle CSV with or without headers
-      const values = line.split(',').map(val => val.trim().replace(/"/g, ''));
+      // Handle both CSV and plain text input
+      const values = line.includes(',') 
+        ? line.split(',').map(val => val.trim().replace(/"/g, ''))
+        : [line];
       
       // Skip header row if it contains non-geocode text
       if (values.some(val => val.toLowerCase().includes('geocode') || val.toLowerCase().includes('property') || val.toLowerCase().includes('code'))) {
         continue;
       }
       
-      // Extract geocodes from each row (take first column that looks like a geocode)
+      // Extract geocodes from each value
       for (const value of values) {
-        if (value && /^[0-9\-]+$/.test(value) && value.length >= 5) {
-          geocodes.push(value);
-          break; // Take only the first valid geocode per row
+        const cleaned = value.trim();
+        if (cleaned && /^[0-9\-]+$/.test(cleaned) && cleaned.length >= 5) {
+          geocodes.push(cleaned);
+          break; // Take only the first valid geocode per line/row
         }
       }
     }
@@ -128,7 +144,7 @@ export function PropertySearchForm({ onSearch, isLoading }: PropertySearchFormPr
 
     try {
       const text = await selectedFile.text();
-      const geocodes = parseCSV(text);
+      const geocodes = parseTextInput(text);
       
       if (geocodes.length === 0) {
         setFileValidation({ isValid: false, message: 'No valid geocodes found in the file' });
@@ -143,6 +159,75 @@ export function PropertySearchForm({ onSearch, isLoading }: PropertySearchFormPr
       batchMutation.mutate(geocodes);
     } catch (error) {
       setFileValidation({ isValid: false, message: 'Failed to read the file' });
+    }
+  };
+
+  const handleTextInputChange = (text: string) => {
+    setBatchInput(text);
+    if (text.trim()) {
+      const geocodes = parseTextInput(text);
+      setParsedGeocodes(geocodes);
+    } else {
+      setParsedGeocodes([]);
+      setShowPreview(false);
+    }
+  };
+
+  const handlePreviewToggle = () => {
+    setShowPreview(!showPreview);
+  };
+
+  const handleTextBatchSubmit = () => {
+    if (parsedGeocodes.length === 0) return;
+    
+    if (parsedGeocodes.length > 10) {
+      setFileValidation({ isValid: false, message: 'Maximum 10 geocodes allowed per batch' });
+      return;
+    }
+    
+    setFileValidation(null);
+    batchMutation.mutate(parsedGeocodes);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const csvFile = files.find(file => 
+      file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv'
+    );
+    
+    if (csvFile) {
+      const validation = validateFile(csvFile);
+      setFileValidation(validation);
+      
+      if (validation.isValid) {
+        setSelectedFile(csvFile);
+        setBatchResults(null);
+      } else {
+        setSelectedFile(null);
+      }
+    } else {
+      setFileValidation({ isValid: false, message: 'Please drop a CSV file' });
     }
   };
 
@@ -218,18 +303,109 @@ export function PropertySearchForm({ onSearch, isLoading }: PropertySearchFormPr
           </TabsContent>
           
           <TabsContent value="batch" className="space-y-4">
-            <div className="space-y-4">
-              <div>
+            <div className="space-y-6">
+              {/* Textarea Input Section */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-on-surface">Copy & Paste Geocodes</Label>
+                <div className="relative">
+                  <Textarea
+                    value={batchInput}
+                    onChange={(e) => handleTextInputChange(e.target.value)}
+                    placeholder="Paste geocodes here, one per line or comma-separated:\n03-1032-34-1-08-10-0000\n04-2345-12-1-05-08-0000\n..."
+                    className="w-full min-h-24 px-3 py-2 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm resize-y"
+                    data-testid="textarea-batch-input"
+                  />
+                  {parsedGeocodes.length > 0 && (
+                    <div className="absolute top-2 right-2 flex items-center space-x-2">
+                      <Badge variant="secondary" className="bg-blue-800 text-blue-100">
+                        {parsedGeocodes.length} found
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handlePreviewToggle}
+                        className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
+                        data-testid="button-preview-toggle"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {showPreview && parsedGeocodes.length > 0 && (
+                  <div className="p-3 bg-surface-variant rounded-lg border border-gray-600" data-testid="geocode-preview">
+                    <h4 className="text-sm font-medium text-on-surface mb-2 flex items-center">
+                      <List className="h-4 w-4 mr-2" />
+                      Detected Geocodes ({parsedGeocodes.length})
+                    </h4>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {parsedGeocodes.map((geocode, index) => (
+                        <div key={index} className="text-xs font-mono bg-surface p-1 rounded border border-gray-700">
+                          {geocode}
+                        </div>
+                      ))}
+                    </div>
+                    {parsedGeocodes.length > 10 && (
+                      <p className="text-xs text-orange-400 mt-2">
+                        ⚠️ Only the first 10 geocodes will be processed
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-on-surface-variant">
+                    Enter geocodes one per line, or comma-separated. Format: 03-1032-34-1-08-10-0000
+                  </p>
+                  <Button
+                    onClick={handleTextBatchSubmit}
+                    disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
+                    className="bg-primary hover:bg-blue-700 disabled:bg-gray-600"
+                    data-testid="button-batch-submit"
+                  >
+                    {batchMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>Process {parsedGeocodes.length} Geocodes</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-600" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-surface px-2 text-gray-400">Or</span>
+                </div>
+              </div>
+              
+              {/* File Upload Section */}
+              <div className="space-y-3">
                 <Label className="text-sm font-medium text-on-surface">Upload CSV File</Label>
                 <div className="mt-2">
                   <div className="flex items-center justify-center w-full">
                     <label
                       htmlFor="csv-upload"
-                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-surface-variant hover:bg-gray-700 transition-colors"
+                      className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                        dragActive
+                          ? 'border-primary bg-primary/10'
+                          : 'border-gray-600 bg-surface-variant hover:bg-gray-700'
+                      }`}
                       data-testid="label-file-upload"
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
                     >
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                        <Upload className={`w-8 h-8 mb-2 ${dragActive ? 'text-primary' : 'text-gray-400'}`} />
                         <p className="mb-2 text-sm text-gray-400">
                           <span className="font-semibold">Click to upload</span> or drag and drop
                         </p>
