@@ -411,7 +411,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
                   <Textarea
                     value={batchInput}
                     onChange={(e) => handleTextInputChange(e.target.value)}
-                    placeholder="Paste geocodes here, one per line or comma-separated:\n03-1032-34-1-08-10-0000\n04-2345-12-1-05-08-0000\n..."
+                    placeholder="Paste geocodes here, one per line:\n03-1032-34-1-08-10-0000\n04-2345-12-1-05-08-0000\n..."
                     className="w-full min-h-24 px-3 py-2 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm resize-y"
                     data-testid="textarea-batch-input"
                   />
@@ -456,7 +456,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
                 
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-on-surface-variant">
-                    Enter geocodes one per line, or comma-separated. Format: 03-1032-34-1-08-10-0000
+                    Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
                   </p>
                   <Button
                     onClick={handleTextBatchSubmit}
