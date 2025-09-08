@@ -261,69 +261,6 @@ export const PropertyMap = memo(function PropertyMap({ properties, selectedGeoco
         </MapContainer>
       </div>
       
-      {/* Enhanced Map Legend */}
-      <div className="mt-4 space-y-3">
-        {propertiesWithColors.length > 1 && (
-          <div className="text-sm font-medium text-on-surface mb-2">
-            Properties ({propertiesWithColors.length}{properties.length > MAX_VISIBLE_PROPERTIES ? ` of ${properties.length}` : ''})
-            {properties.length > MAX_VISIBLE_PROPERTIES && (
-              <span className="text-xs text-on-surface-variant ml-2">
-                Showing first {MAX_VISIBLE_PROPERTIES} for performance
-              </span>
-            )}
-          </div>
-        )}
-        
-        <div className="grid grid-cols-1 gap-2 text-sm text-on-surface-variant max-h-32 overflow-y-auto">
-          {propertiesWithColors.map((property) => (
-            <div key={`legend-${property.geocode}-${property.colorIndex}`} className="flex items-center space-x-3 p-2 rounded bg-surface-variant/20">
-              <div className="flex items-center space-x-2">
-                <div 
-                  className="w-3 h-3 rounded-full border border-white flex-shrink-0"
-                  style={{ backgroundColor: PROPERTY_COLOR }}
-                ></div>
-                {property.parcelGeometry && (
-                  <div 
-                    className="w-3 h-3 border-2 bg-opacity-10 flex-shrink-0"
-                    style={{ 
-                      borderColor: PROPERTY_COLOR, 
-                      backgroundColor: PROPERTY_COLOR + '1A' // Add transparency
-                    }}
-                  ></div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-xs text-on-surface">{property.geocode}</div>
-                <div className="text-xs truncate" title={property.address}>{property.address}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {propertiesWithColors.length > 0 && (
-          <div className="flex items-center space-x-4 text-xs text-on-surface-variant pt-2 border-t border-gray-600">
-            <div className="flex items-center space-x-2">
-              <div 
-                className="w-2 h-2 rounded-full border border-white"
-                style={{ backgroundColor: PROPERTY_COLOR }}
-              ></div>
-              <span>Property Center</span>
-            </div>
-            {propertiesWithColors.some(p => p.parcelGeometry) && (
-              <div className="flex items-center space-x-2">
-                <div 
-                  className="w-2 h-2 border-2 bg-opacity-10"
-                  style={{ 
-                    borderColor: PROPERTY_COLOR, 
-                    backgroundColor: PROPERTY_COLOR + '1A'
-                  }}
-                ></div>
-                <span>Parcel Boundary</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   );
 });

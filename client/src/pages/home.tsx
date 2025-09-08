@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { lookupProperty } from "@/lib/geocoding";
-import { PropertyInfo, ApiResponse, BatchApiResponse } from "@shared/schema";
-import { AlertCircle, RotateCcw, HelpCircle } from "lucide-react";
+import { PropertyInfo, ApiResponse, BatchApiResponse, BatchPropertyResult } from "@shared/schema";
+import { AlertCircle, RotateCcw, HelpCircle, CheckCircle, XCircle, Download, RefreshCw, Loader2 } from "lucide-react";
+import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ToastState {
   show: boolean;
@@ -24,6 +26,8 @@ export default function Home() {
   const [toast, setToast] = useState<ToastState>({ show: false, message: "", type: "info" });
   const [isShowingBatch, setIsShowingBatch] = useState(false);
   const [selectedGeocode, setSelectedGeocode] = useState<string | null>(null);
+  const [batchResults, setBatchResults] = useState<BatchApiResponse | null>(null);
+  const [retryingGeocodes, setRetryingGeocodes] = useState<Set<string>>(new Set());
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
@@ -59,6 +63,8 @@ export default function Home() {
   };
   
   const handleBatchResults = (batchResults: BatchApiResponse) => {
+    setBatchResults(batchResults); // Store batch results for display
+    
     if (batchResults.success && batchResults.results.length > 0) {
       // Extract successful property data from batch results
       const successfulProperties = batchResults.results
@@ -92,6 +98,54 @@ export default function Home() {
       setErrorState(batchResults.error || 'Batch lookup failed');
       setSelectedGeocode(null);
     }
+  };
+
+  // Retry mutation for failed geocodes
+  const retryMutation = useMutation({
+    mutationFn: async (geocodes: string[]): Promise<BatchApiResponse> => {
+      const response = await apiRequest('POST', '/api/property/batch-lookup', { geocodes });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      handleBatchResults(data);
+      setRetryingGeocodes(new Set());
+    },
+    onError: () => {
+      setRetryingGeocodes(new Set());
+      showToast('Failed to retry geocodes', 'error');
+    }
+  });
+
+  const handleExportCSV = (includeAll: boolean) => {
+    if (!batchResults) return;
+    
+    const resultsToExport = includeAll 
+      ? batchResults.results 
+      : batchResults.results.filter(result => result.success);
+      
+    const csvContent = batchResultsToCSV(resultsToExport, {
+      includeMetadata: true,
+      includeFailedResults: includeAll
+    });
+    
+    const filename = generateCsvFilename(includeAll ? 'all' : 'successful');
+    downloadCSV(csvContent, filename);
+    
+    const count = resultsToExport.length;
+    showToast(`Exported ${count} ${includeAll ? 'results' : 'successful results'} to CSV`, 'success');
+  };
+
+  const handleRetryIndividual = (geocode: string) => {
+    setRetryingGeocodes(prev => new Set([...prev, geocode]));
+    retryMutation.mutate([geocode]);
+  };
+
+  const handleRetryAllFailed = () => {
+    if (!batchResults) return;
+    
+    const failedGeocodes = getFailedGeocodes(batchResults.results);
+    setRetryingGeocodes(new Set(failedGeocodes));
+    retryMutation.mutate(failedGeocodes);
   };
 
   const handlePropertySelect = (geocode: string) => {
@@ -198,6 +252,116 @@ export default function Home() {
                           selectedGeocode={selectedGeocode}
                         />
                       </div>
+
+                      {/* Results Summary and Export Actions */}
+                      {batchResults && batchResults.success && batchResults.results.length > 0 && (
+                        <div className="mt-6 space-y-4">
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-on-surface">Results Summary:</h4>
+                            <div className="max-h-40 overflow-y-auto space-y-1">
+                              {batchResults.results.map((result, index) => (
+                                <div key={index} className="flex items-center justify-between p-2 bg-surface-variant rounded text-xs">
+                                  <div className="flex items-center space-x-2 flex-1">
+                                    <span className="font-mono">{result.geocode}</span>
+                                    {result.success && result.data?.address && (
+                                      <button
+                                        onClick={() => setSelectedGeocode(result.geocode)}
+                                        className="text-blue-400 hover:text-blue-300 hover:underline cursor-pointer truncate flex-1 text-left transition-colors duration-200"
+                                        title="Click to highlight on map"
+                                        data-testid={`address-link-${result.geocode}`}
+                                      >
+                                        {result.data.address}
+                                      </button>
+                                    )}
+                                    {result.processedAt && (
+                                      <span className="text-gray-500 text-xs">
+                                        {new Date(result.processedAt).toLocaleTimeString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    {result.success ? (
+                                      <div className="flex items-center space-x-1">
+                                        <CheckCircle className="h-3 w-3 text-green-400" />
+                                        <span className="text-green-400">Found</span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center space-x-2">
+                                        <div className="flex items-center space-x-1">
+                                          <XCircle className="h-3 w-3 text-red-400" />
+                                          <span className="text-red-400" title={result.error}>
+                                            {result.error && result.error.length > 20 
+                                              ? result.error.substring(0, 20) + '...' 
+                                              : result.error || 'Error'}
+                                          </span>
+                                        </div>
+                                        <Button
+                                          onClick={() => handleRetryIndividual(result.geocode)}
+                                          variant="ghost"
+                                          size="sm"
+                                          disabled={retryingGeocodes.has(result.geocode)}
+                                          className="h-6 w-6 p-0 hover:bg-orange-800/20"
+                                          data-testid={`button-retry-${result.geocode}`}
+                                          title="Retry this geocode"
+                                        >
+                                          {retryingGeocodes.has(result.geocode) ? (
+                                            <Loader2 className="h-3 w-3 animate-spin text-orange-400" />
+                                          ) : (
+                                            <RefreshCw className="h-3 w-3 text-orange-400" />
+                                          )}
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Export and Retry Actions */}
+                          <div className="flex flex-wrap gap-2 p-3 bg-surface-variant rounded-lg">
+                            <Button
+                              onClick={() => handleExportCSV(true)}
+                              variant="secondary"
+                              size="sm"
+                              className="bg-blue-800 hover:bg-blue-700 text-blue-100"
+                              data-testid="button-export-all"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Export All Results
+                            </Button>
+                            
+                            <Button
+                              onClick={() => handleExportCSV(false)}
+                              variant="secondary"
+                              size="sm"
+                              className="bg-green-800 hover:bg-green-700 text-green-100"
+                              data-testid="button-export-successful"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Export Successful Only
+                            </Button>
+
+                            {batchResults.totalFailed > 0 && (
+                              <Button
+                                onClick={handleRetryAllFailed}
+                                variant="secondary"
+                                size="sm"
+                                disabled={retryMutation.isPending}
+                                className="bg-orange-800 hover:bg-orange-700 text-orange-100 disabled:bg-gray-600"
+                                data-testid="button-retry-all-failed"
+                              >
+                                {retryMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                )}
+                                Retry All Failed ({batchResults.totalFailed})
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
