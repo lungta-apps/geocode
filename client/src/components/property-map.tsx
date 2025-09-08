@@ -184,6 +184,7 @@ export const PropertyMap = memo(function PropertyMap({ properties, selectedGeoco
           center={[centerLat, centerLng]}
           zoom={propertiesWithColors.length === 1 ? 15 : 10}
           className="w-full h-80 rounded-lg border border-gray-600 leaflet-dark-theme"
+          style={{ height: '100%', minHeight: '320px' }}
           zoomControl={false}
           ref={mapRef}
         >

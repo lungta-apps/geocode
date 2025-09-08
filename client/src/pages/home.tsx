@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { lookupProperty } from "@/lib/geocoding";
 import { PropertyInfo, ApiResponse, BatchApiResponse, BatchPropertyResult } from "@shared/schema";
-import { AlertCircle, RotateCcw, HelpCircle, CheckCircle, XCircle, Download, RefreshCw, Loader2 } from "lucide-react";
+import { AlertCircle, RotateCcw, HelpCircle, CheckCircle, XCircle, Download, RefreshCw, Loader2, Maximize2, X } from "lucide-react";
 import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -28,6 +28,7 @@ export default function Home() {
   const [selectedGeocode, setSelectedGeocode] = useState<string | null>(null);
   const [batchResults, setBatchResults] = useState<BatchApiResponse | null>(null);
   const [retryingGeocodes, setRetryingGeocodes] = useState<Set<string>>(new Set());
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
@@ -239,9 +240,21 @@ export default function Home() {
                             {batchPropertyData.length} {batchPropertyData.length === 1 ? 'property' : 'properties'} found and displayed on the map
                           </p>
                         </div>
-                        <Badge variant="secondary" className="bg-blue-800 text-blue-100">
-                          {batchPropertyData.length} Properties
-                        </Badge>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            onClick={() => setIsMapExpanded(true)}
+                            variant="outline"
+                            size="sm"
+                            className="border-gray-600 hover:bg-gray-700 text-gray-300 hover:text-white"
+                            title="Expand map to full screen"
+                            data-testid="button-expand-map"
+                          >
+                            <Maximize2 className="h-4 w-4" />
+                          </Button>
+                          <Badge variant="secondary" className="bg-blue-800 text-blue-100">
+                            {batchPropertyData.length} Properties
+                          </Badge>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -368,6 +381,72 @@ export default function Home() {
               </section>
             )}
           </>
+        )}
+
+        {/* Full-Screen Map Modal */}
+        {isMapExpanded && batchPropertyData.length > 0 && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
+            <div className="w-full h-full max-w-7xl bg-surface rounded-lg border border-gray-700 flex flex-col">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                <div className="flex items-center space-x-2">
+                  <span className="w-4 h-4 bg-green-500 rounded-full"></span>
+                  <h2 className="text-lg font-semibold text-on-surface">
+                    Map View - {batchPropertyData.length} Properties
+                  </h2>
+                </div>
+                <Button
+                  onClick={() => setIsMapExpanded(false)}
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-gray-700 text-gray-400 hover:text-white"
+                  title="Close full screen view"
+                  data-testid="button-close-expanded-map"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              
+              {/* Expanded Map */}
+              <div className="flex-1 p-4">
+                <div className="w-full h-full">
+                  <PropertyMap 
+                    properties={batchPropertyData} 
+                    selectedGeocode={selectedGeocode}
+                  />
+                </div>
+              </div>
+              
+              {/* Results Summary in Modal */}
+              {batchResults && batchResults.success && batchResults.results.length > 0 && (
+                <div className="border-t border-gray-700 p-4 max-h-48 overflow-y-auto">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-on-surface mb-2">Click addresses to highlight on map:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {batchResults.results
+                        .filter(result => result.success && result.data?.address)
+                        .map((result, index) => (
+                          <button
+                            key={result.geocode}
+                            onClick={() => setSelectedGeocode(result.geocode)}
+                            className={`p-2 rounded text-left transition-colors duration-200 text-sm ${
+                              selectedGeocode === result.geocode
+                                ? 'bg-orange-800/30 border border-orange-500 text-orange-300'
+                                : 'bg-surface-variant hover:bg-surface-variant/80 text-blue-400 hover:text-blue-300'
+                            }`}
+                            title="Click to highlight on map"
+                            data-testid={`modal-address-link-${result.geocode}`}
+                          >
+                            <div className="font-mono text-xs text-gray-400">{result.geocode}</div>
+                            <div className="truncate">{result.data?.address}</div>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Error State */}
