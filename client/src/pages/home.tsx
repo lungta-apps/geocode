@@ -259,8 +259,9 @@ export default function Home() {
                     </CardHeader>
                     <CardContent>
                       {/* Multi-Property Map */}
-                      <div className="w-full">
+                      <div className="w-full" style={{ height: '320px' }}>
                         <PropertyMap 
+                          key="inline-map"
                           properties={batchPropertyData} 
                           selectedGeocode={selectedGeocode}
                         />
@@ -409,8 +410,9 @@ export default function Home() {
               
               {/* Expanded Map */}
               <div className="flex-1 p-4">
-                <div className="w-full h-full">
+                <div className="w-full h-full" style={{ minHeight: '500px' }}>
                   <PropertyMap 
+                    key="expanded-map"
                     properties={batchPropertyData} 
                     selectedGeocode={selectedGeocode}
                   />
