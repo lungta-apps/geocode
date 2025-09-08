@@ -599,51 +599,6 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                     </AlertDescription>
                   </Alert>
 
-                  {/* Export and Retry Actions */}
-                  {batchResults.success && batchResults.results.length > 0 && (
-                    <div className="flex flex-wrap gap-2 p-3 bg-surface-variant rounded-lg">
-                      <Button
-                        onClick={() => handleExportCSV(true)}
-                        variant="secondary"
-                        size="sm"
-                        className="bg-blue-800 hover:bg-blue-700 text-blue-100"
-                        data-testid="button-export-all"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export All Results
-                      </Button>
-                      
-                      <Button
-                        onClick={() => handleExportCSV(false)}
-                        variant="secondary"
-                        size="sm"
-                        className="bg-green-800 hover:bg-green-700 text-green-100"
-                        data-testid="button-export-successful"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export Successful Only
-                      </Button>
-
-                      {batchResults.totalFailed > 0 && (
-                        <Button
-                          onClick={handleRetryAllFailed}
-                          variant="secondary"
-                          size="sm"
-                          disabled={retryMutation.isPending}
-                          className="bg-orange-800 hover:bg-orange-700 text-orange-100 disabled:bg-gray-600"
-                          data-testid="button-retry-all-failed"
-                        >
-                          {retryMutation.isPending ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                          )}
-                          Retry All Failed ({batchResults.totalFailed})
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
                   {batchResults.success && batchResults.results.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-on-surface">Results Summary:</h4>
@@ -705,6 +660,51 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Export and Retry Actions */}
+                  {batchResults.success && batchResults.results.length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-3 bg-surface-variant rounded-lg">
+                      <Button
+                        onClick={() => handleExportCSV(true)}
+                        variant="secondary"
+                        size="sm"
+                        className="bg-blue-800 hover:bg-blue-700 text-blue-100"
+                        data-testid="button-export-all"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export All Results
+                      </Button>
+                      
+                      <Button
+                        onClick={() => handleExportCSV(false)}
+                        variant="secondary"
+                        size="sm"
+                        className="bg-green-800 hover:bg-green-700 text-green-100"
+                        data-testid="button-export-successful"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Successful Only
+                      </Button>
+
+                      {batchResults.totalFailed > 0 && (
+                        <Button
+                          onClick={handleRetryAllFailed}
+                          variant="secondary"
+                          size="sm"
+                          disabled={retryMutation.isPending}
+                          className="bg-orange-800 hover:bg-orange-700 text-orange-100 disabled:bg-gray-600"
+                          data-testid="button-retry-all-failed"
+                        >
+                          {retryMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-4 w-4 mr-2" />
+                          )}
+                          Retry All Failed ({batchResults.totalFailed})
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
