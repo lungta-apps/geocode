@@ -223,3 +223,19 @@
     opacity: 0;
   }
 }
+
+/* Property marker pulse animation for selected property */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.6);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+  }
+}
