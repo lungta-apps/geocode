@@ -24,17 +24,28 @@ interface PropertyWithColor extends PropertyInfo {
   colorIndex: number;
 }
 
-// Single blue color for all properties
-const PROPERTY_COLOR = '#2196F3'; // Nice blue
+// Color constants for properties
+const PROPERTY_COLOR = '#2196F3'; // Nice blue for unselected
+const SELECTED_COLOR = '#FF6B35'; // Orange for selected/highlighted property
+const UNSELECTED_OPACITY = 0.4; // Dimmed when another property is selected
 
 // Performance constants
 const MAX_VISIBLE_PROPERTIES = 50;
 const POLYGON_SIMPLIFICATION_TOLERANCE = 0.0001;
 
-function MapController({ properties }: { properties: PropertyInfo[] }) {
+function MapController({ properties, selectedGeocode }: { properties: PropertyInfo[], selectedGeocode?: string | null }) {
   const map = useMap();
   
   useEffect(() => {
+    if (selectedGeocode) {
+      // Find the selected property and center on it
+      const selectedProperty = properties.find(p => p.geocode === selectedGeocode);
+      if (selectedProperty && selectedProperty.lat && selectedProperty.lng) {
+        map.setView([selectedProperty.lat, selectedProperty.lng], 16);
+        return;
+      }
+    }
+
     if (properties.length === 0) return;
 
     // Collect all coordinates for bounds calculation
@@ -65,7 +76,7 @@ function MapController({ properties }: { properties: PropertyInfo[] }) {
         map.fitBounds(bounds, { padding: [30, 30] });
       }
     }
-  }, [map, properties]);
+  }, [map, properties, selectedGeocode]);
 
   return null;
 }
@@ -114,14 +125,30 @@ export const PropertyMap = memo(function PropertyMap({ properties, selectedGeoco
     }));
   }, [properties]);
 
-  // Single custom marker icon for all properties
-  const customIcon = useMemo(() => {
-    return L.divIcon({
+  // Custom marker icons for selected and unselected properties
+  const { selectedIcon, unselectedIcon, dimmedIcon } = useMemo(() => {
+    const selectedIcon = L.divIcon({
+      className: 'custom-marker-selected',
+      html: `<div style="background-color: ${SELECTED_COLOR}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4); animation: pulse 2s infinite;"></div>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15]
+    });
+    
+    const unselectedIcon = L.divIcon({
       className: 'custom-marker',
       html: `<div style="background-color: ${PROPERTY_COLOR}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
       iconSize: [26, 26],
       iconAnchor: [13, 13]
     });
+    
+    const dimmedIcon = L.divIcon({
+      className: 'custom-marker-dimmed',
+      html: `<div style="background-color: ${PROPERTY_COLOR}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.2); opacity: ${UNSELECTED_OPACITY};"></div>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+    
+    return { selectedIcon, unselectedIcon, dimmedIcon };
   }, []);
   
   // Memoized center point calculation for initial map positioning
@@ -176,50 +203,69 @@ export const PropertyMap = memo(function PropertyMap({ properties, selectedGeoco
           maxZoom={20}
         />
         
-        {/* Render all properties */}
-        {propertiesWithColors.map((property) => (
-          <div key={`property-${property.geocode}-${property.colorIndex}`}>
-            {/* Render parcel polygon if geometry is available */}
-            {property.parcelGeometry?.coordinates && (
-              <Polygon
-                positions={property.parcelGeometry.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])}
-                pathOptions={{
-                  color: PROPERTY_COLOR,
-                  weight: 2,
-                  opacity: 1,
-                  fillColor: PROPERTY_COLOR,
-                  fillOpacity: 0.1
-                }}
-              >
-                <Popup className="dark-popup">
-                  <div className="text-gray-900 font-sans">
-                    <strong className="text-primary block mb-1">Property Parcel</strong>
-                    <div className="text-sm font-medium mb-1">{property.geocode}</div>
-                    <span className="text-sm">{property.address}</span>
-                  </div>
-                </Popup>
-              </Polygon>
-            )}
-            
-            {/* Center point marker */}
-            {property.lat && property.lng && (
-              <Marker 
-                position={[property.lat, property.lng]} 
-                icon={customIcon}
-              >
-                <Popup className="dark-popup">
-                  <div className="text-gray-900 font-sans">
-                    <strong className="text-primary block mb-1">Property Center</strong>
-                    <div className="text-sm font-medium mb-1">{property.geocode}</div>
-                    <span className="text-sm">{property.address}</span>
-                  </div>
-                </Popup>
-              </Marker>
-            )}
-          </div>
-        ))}
+        {/* Render all properties with highlighting */}
+        {propertiesWithColors.map((property) => {
+          const isSelected = selectedGeocode === property.geocode;
+          const isAnySelected = selectedGeocode !== null;
+          const shouldBeDimmed = isAnySelected && !isSelected;
+          
+          // Determine colors and opacity based on selection state
+          const polygonColor = isSelected ? SELECTED_COLOR : PROPERTY_COLOR;
+          const polygonOpacity = shouldBeDimmed ? UNSELECTED_OPACITY : 1;
+          const fillOpacity = isSelected ? 0.2 : (shouldBeDimmed ? 0.05 : 0.1);
+          const weight = isSelected ? 3 : 2;
+          
+          // Choose appropriate icon
+          const markerIcon = isSelected ? selectedIcon : (shouldBeDimmed ? dimmedIcon : unselectedIcon);
+          
+          return (
+            <div key={`property-${property.geocode}-${property.colorIndex}`}>
+              {/* Render parcel polygon if geometry is available */}
+              {property.parcelGeometry?.coordinates && (
+                <Polygon
+                  positions={property.parcelGeometry.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])}
+                  pathOptions={{
+                    color: polygonColor,
+                    weight: weight,
+                    opacity: polygonOpacity,
+                    fillColor: polygonColor,
+                    fillOpacity: fillOpacity
+                  }}
+                >
+                  <Popup className="dark-popup">
+                    <div className="text-gray-900 font-sans">
+                      <strong className="text-primary block mb-1">
+                        {isSelected ? '📍 Selected Property Parcel' : 'Property Parcel'}
+                      </strong>
+                      <div className="text-sm font-medium mb-1">{property.geocode}</div>
+                      <span className="text-sm">{property.address}</span>
+                    </div>
+                  </Popup>
+                </Polygon>
+              )}
+              
+              {/* Center point marker */}
+              {property.lat && property.lng && (
+                <Marker 
+                  position={[property.lat, property.lng]} 
+                  icon={markerIcon}
+                >
+                  <Popup className="dark-popup">
+                    <div className="text-gray-900 font-sans">
+                      <strong className="text-primary block mb-1">
+                        {isSelected ? '📍 Selected Property Center' : 'Property Center'}
+                      </strong>
+                      <div className="text-sm font-medium mb-1">{property.geocode}</div>
+                      <span className="text-sm">{property.address}</span>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
+            </div>
+          );
+        })}
         
-          <MapController properties={propertiesWithColors} />
+          <MapController properties={propertiesWithColors} selectedGeocode={selectedGeocode} />
           <ZoomControls />
         </MapContainer>
       </div>
