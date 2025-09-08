@@ -33,19 +33,10 @@ const UNSELECTED_OPACITY = 0.4; // Dimmed when another property is selected
 const MAX_VISIBLE_PROPERTIES = 50;
 const POLYGON_SIMPLIFICATION_TOLERANCE = 0.0001;
 
-function MapController({ properties, selectedGeocode }: { properties: PropertyInfo[], selectedGeocode?: string | null }) {
+function MapController({ properties }: { properties: PropertyInfo[] }) {
   const map = useMap();
   
   useEffect(() => {
-    if (selectedGeocode) {
-      // Find the selected property and center on it
-      const selectedProperty = properties.find(p => p.geocode === selectedGeocode);
-      if (selectedProperty && selectedProperty.lat && selectedProperty.lng) {
-        map.setView([selectedProperty.lat, selectedProperty.lng], 16);
-        return;
-      }
-    }
-
     if (properties.length === 0) return;
 
     // Collect all coordinates for bounds calculation
@@ -76,7 +67,7 @@ function MapController({ properties, selectedGeocode }: { properties: PropertyIn
         map.fitBounds(bounds, { padding: [30, 30] });
       }
     }
-  }, [map, properties, selectedGeocode]);
+  }, [map, properties]);
 
   return null;
 }
@@ -265,7 +256,7 @@ export const PropertyMap = memo(function PropertyMap({ properties, selectedGeoco
           );
         })}
         
-          <MapController properties={propertiesWithColors} selectedGeocode={selectedGeocode} />
+          <MapController properties={propertiesWithColors} />
           <ZoomControls />
         </MapContainer>
       </div>
