@@ -136,7 +136,7 @@ export default function Home() {
   };
 
   const handleRetryIndividual = (geocode: string) => {
-    setRetryingGeocodes(prev => new Set([...prev, geocode]));
+    setRetryingGeocodes(prev => new Set([...Array.from(prev), geocode]));
     retryMutation.mutate([geocode]);
   };
 
