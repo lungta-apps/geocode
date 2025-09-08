@@ -259,13 +259,20 @@ export default function Home() {
                     </CardHeader>
                     <CardContent>
                       {/* Multi-Property Map */}
-                      <div className="w-full" style={{ height: '320px' }}>
-                        <PropertyMap 
-                          key="inline-map"
-                          properties={batchPropertyData} 
-                          selectedGeocode={selectedGeocode}
-                        />
-                      </div>
+                      {!isMapExpanded && (
+                        <div className="w-full" style={{ height: '320px' }}>
+                          <PropertyMap 
+                            key="inline-map"
+                            properties={batchPropertyData} 
+                            selectedGeocode={selectedGeocode}
+                          />
+                        </div>
+                      )}
+                      {isMapExpanded && (
+                        <div className="w-full bg-surface-variant rounded-lg border border-gray-600 flex items-center justify-center" style={{ height: '320px' }}>
+                          <p className="text-on-surface-variant">Map expanded to full screen view</p>
+                        </div>
+                      )}
 
                       {/* Results Summary and Export Actions */}
                       {batchResults && batchResults.success && batchResults.results.length > 0 && (
@@ -408,11 +415,11 @@ export default function Home() {
                 </Button>
               </div>
               
-              {/* Expanded Map */}
-              <div className="flex-1 p-4">
-                <div className="w-full h-full" style={{ minHeight: '500px' }}>
+              {/* Expanded Map Container */}
+              <div className="flex-1 p-4 overflow-hidden">
+                <div className="w-full h-full bg-gray-800 rounded-lg">
                   <PropertyMap 
-                    key="expanded-map"
+                    key={`expanded-map-${isMapExpanded}-${batchPropertyData.length}`}
                     properties={batchPropertyData} 
                     selectedGeocode={selectedGeocode}
                   />
