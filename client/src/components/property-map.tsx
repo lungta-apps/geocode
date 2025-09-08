@@ -174,17 +174,18 @@ export const PropertyMap = memo(function PropertyMap({ properties, selectedGeoco
   }, []);
 
   return (
-    <div className="relative">
+    <div className="relative h-full">
       <div
         role="img"
         aria-label={`Interactive map showing ${propertiesWithColors.length} ${propertiesWithColors.length === 1 ? 'property' : 'properties'}`}
         data-testid="map-container"
+        className="h-full"
       >
         <MapContainer
           center={[centerLat, centerLng]}
           zoom={propertiesWithColors.length === 1 ? 15 : 10}
-          className="w-full rounded-lg border border-gray-600 leaflet-dark-theme"
-          style={{ height: '100%', minHeight: '320px' }}
+          className="w-full h-full rounded-lg border border-gray-600 leaflet-dark-theme"
+          style={{ minHeight: '320px' }}
           zoomControl={false}
           ref={mapRef}
         >

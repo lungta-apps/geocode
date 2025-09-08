@@ -416,8 +416,8 @@ export default function Home() {
               </div>
               
               {/* Expanded Map Container */}
-              <div className="flex-1 p-4 overflow-hidden">
-                <div className="w-full h-full bg-gray-800 rounded-lg">
+              <div className="flex-1 p-4 overflow-hidden flex flex-col">
+                <div className="w-full flex-1 rounded-lg overflow-hidden">
                   <PropertyMap 
                     key={`expanded-map-${isMapExpanded}-${batchPropertyData.length}`}
                     properties={batchPropertyData} 
