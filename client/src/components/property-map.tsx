@@ -16,6 +16,7 @@ L.Icon.Default.mergeOptions({
 
 interface PropertyMapProps {
   properties: PropertyInfo[];
+  selectedGeocode?: string | null;
 }
 
 interface PropertyWithColor extends PropertyInfo {
@@ -96,7 +97,7 @@ function ZoomControls() {
   );
 }
 
-export const PropertyMap = memo(function PropertyMap({ properties }: PropertyMapProps) {
+export const PropertyMap = memo(function PropertyMap({ properties, selectedGeocode }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   
   // Memoized processing of properties with single color and performance optimizations

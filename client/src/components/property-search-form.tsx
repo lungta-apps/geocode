@@ -20,10 +20,11 @@ import { BatchProgress } from "@/components/batch-progress";
 interface PropertySearchFormProps {
   onSearch: (geocode: string) => void;
   onBatchResults?: (results: BatchApiResponse) => void;
+  onPropertySelect?: (geocode: string) => void;
   isLoading: boolean;
 }
 
-export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: PropertySearchFormProps) {
+export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect, isLoading }: PropertySearchFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileValidation, setFileValidation] = useState<{ isValid: boolean; message?: string } | null>(null);
   const [batchResults, setBatchResults] = useState<BatchApiResponse | null>(null);
@@ -649,8 +650,18 @@ export function PropertySearchForm({ onSearch, onBatchResults, isLoading }: Prop
                       <div className="max-h-40 overflow-y-auto space-y-1">
                         {batchResults.results.map((result, index) => (
                           <div key={index} className="flex items-center justify-between p-2 bg-surface-variant rounded text-xs">
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2 flex-1">
                               <span className="font-mono">{result.geocode}</span>
+                              {result.success && result.data?.address && (
+                                <button
+                                  onClick={() => onPropertySelect?.(result.geocode)}
+                                  className="text-blue-400 hover:text-blue-300 hover:underline cursor-pointer truncate flex-1 text-left transition-colors duration-200"
+                                  title="Click to highlight on map"
+                                  data-testid={`address-link-${result.geocode}`}
+                                >
+                                  {result.data.address}
+                                </button>
+                              )}
                               {result.processedAt && (
                                 <span className="text-gray-500 text-xs">
                                   {new Date(result.processedAt).toLocaleTimeString()}
