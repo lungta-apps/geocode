@@ -23,6 +23,7 @@ export default function Home() {
   const [errorState, setErrorState] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ show: false, message: "", type: "info" });
   const [isShowingBatch, setIsShowingBatch] = useState(false);
+  const [selectedGeocode, setSelectedGeocode] = useState<string | null>(null);
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
@@ -69,6 +70,7 @@ export default function Home() {
         setPropertyData(null); // Clear single property data
         setIsShowingBatch(true);
         setErrorState(null);
+        setSelectedGeocode(null); // Clear selection when new batch loads
         
         const total = batchResults.totalRequested;
         const successful = batchResults.totalSuccessful;
@@ -88,7 +90,12 @@ export default function Home() {
       setBatchPropertyData([]);
       setIsShowingBatch(false);
       setErrorState(batchResults.error || 'Batch lookup failed');
+      setSelectedGeocode(null);
     }
+  };
+
+  const handlePropertySelect = (geocode: string) => {
+    setSelectedGeocode(geocode);
   };
 
   const handleCopyAddress = (address: string) => {
@@ -141,6 +148,7 @@ export default function Home() {
           <PropertySearchForm 
             onSearch={handleSearch}
             onBatchResults={handleBatchResults}
+            onPropertySelect={handlePropertySelect}
             isLoading={searchMutation.isPending}
           />
         </div>
@@ -185,7 +193,10 @@ export default function Home() {
                     <CardContent>
                       {/* Multi-Property Map */}
                       <div className="w-full">
-                        <PropertyMap properties={batchPropertyData} />
+                        <PropertyMap 
+                          properties={batchPropertyData} 
+                          selectedGeocode={selectedGeocode}
+                        />
                       </div>
                     </CardContent>
                   </Card>
