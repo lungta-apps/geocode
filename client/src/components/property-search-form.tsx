@@ -331,6 +331,24 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
     }
   };
 
+  const handleSingleLookupClear = () => {
+    form.setValue('geocode', '');
+    handleInputChange('');
+  };
+
+  const handleBatchUploadClear = () => {
+    setBatchInput('');
+    setSelectedFile(null);
+    setFileValidation(null);
+    setBatchResults(null);
+    setShowPreview(false);
+    
+    // Clear the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <>
     <Card className="bg-surface border-gray-700 shadow-lg">
@@ -384,21 +402,34 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                   )}
                 />
                 
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full sm:w-auto bg-primary hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900 flex items-center justify-center space-x-2"
-                  data-testid="button-search"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Searching...</span>
-                    </>
-                  ) : (
-                    <span>Search Property</span>
-                  )}
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1 sm:flex-none bg-primary hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900 flex items-center justify-center space-x-2"
+                    data-testid="button-search"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Searching...</span>
+                      </>
+                    ) : (
+                      <span>Search Property</span>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSingleLookupClear}
+                    disabled={isLoading || !form.getValues('geocode')}
+                    className="flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                    data-testid="button-clear-single"
+                  >
+                    Clear
+                  </Button>
+                </div>
               </form>
             </Form>
           </TabsContent>
@@ -459,21 +490,33 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                   <p className="text-xs text-on-surface-variant">
                     Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
                   </p>
-                  <Button
-                    onClick={handleTextBatchSubmit}
-                    disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
-                    className="bg-primary hover:bg-blue-700 disabled:bg-gray-600"
-                    data-testid="button-batch-submit"
-                  >
-                    {batchMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>Process {parsedGeocodes.length} Geocodes</>
-                    )}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBatchUploadClear}
+                      disabled={batchMutation.isPending || (parsedGeocodes.length === 0 && !selectedFile && !batchResults)}
+                      className="px-4 py-2 text-sm"
+                      data-testid="button-clear-batch"
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      onClick={handleTextBatchSubmit}
+                      disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
+                      className="bg-primary hover:bg-blue-700 disabled:bg-gray-600"
+                      data-testid="button-batch-submit"
+                    >
+                      {batchMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>Process {parsedGeocodes.length} Geocodes</>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
               
