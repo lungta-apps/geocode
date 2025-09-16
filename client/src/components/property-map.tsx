@@ -104,29 +104,16 @@ export const PropertyMap = memo(function PropertyMap({ properties, selectedGeoco
   
   // Memoized processing of properties with single color and performance optimizations
   const propertiesWithColors: PropertyWithColor[] = useMemo(() => {
-    console.log(`[DEBUG PropertyMap] Received ${properties.length} properties:`, properties.map(p => ({ geocode: p.geocode, lat: p.lat, lng: p.lng, address: p.address })));
-    
     const validProperties = properties.filter(p => p.lat && p.lng);
-    console.log(`[DEBUG PropertyMap] ${validProperties.length} properties have valid coordinates`);
-    
-    // Check for duplicates
-    const geocodes = validProperties.map(p => p.geocode);
-    const uniqueGeocodes = new Set(geocodes);
-    if (geocodes.length !== uniqueGeocodes.size) {
-      console.warn(`[DEBUG PropertyMap] Found ${geocodes.length - uniqueGeocodes.size} duplicate geocodes!`, geocodes);
-    }
     
     // Limit visible properties for performance
     const limitedProperties = validProperties.slice(0, MAX_VISIBLE_PROPERTIES);
     
-    const result = limitedProperties.map((property, index) => ({
+    return limitedProperties.map((property, index) => ({
       ...property,
       color: PROPERTY_COLOR, // All properties use the same blue color
       colorIndex: index
     }));
-    
-    console.log(`[DEBUG PropertyMap] Will render ${result.length} properties on map`);
-    return result;
   }, [properties]);
 
   // Custom marker icons for selected and unselected properties

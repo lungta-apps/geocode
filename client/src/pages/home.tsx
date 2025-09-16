@@ -62,23 +62,16 @@ export default function Home() {
 
   // Helper functions for master property collection
   const addToMasterCollection = (properties: PropertyInfo[], source: PropertyCollectionItem['source']) => {
-    console.log(`[DEBUG] addToMasterCollection called with mode: ${mapMode}, properties count: ${properties.length}, source:`, source);
-    console.log(`[DEBUG] Current master collection size: ${masterPropertyCollection.properties.length}`);
-    
     const newItems: PropertyCollectionItem[] = properties.map(property => ({
       property,
       source
     }));
 
-    setMasterPropertyCollection(prev => {
-      const result = {
-        properties: mapMode === 'replace' ? newItems : [...prev.properties, ...newItems],
-        totalCount: mapMode === 'replace' ? newItems.length : prev.totalCount + newItems.length,
-        lastUpdated: new Date().toISOString()
-      };
-      console.log(`[DEBUG] Master collection updated. New size: ${result.properties.length}, mode was: ${mapMode}`);
-      return result;
-    });
+    setMasterPropertyCollection(prev => ({
+      properties: mapMode === 'replace' ? newItems : [...prev.properties, ...newItems],
+      totalCount: mapMode === 'replace' ? newItems.length : prev.totalCount + newItems.length,
+      lastUpdated: new Date().toISOString()
+    }));
   };
 
   const clearMasterCollection = () => {
@@ -91,11 +84,6 @@ export default function Home() {
 
   // Derive map data from master collection
   const mapPropertyData = masterPropertyCollection.properties.map(item => item.property);
-  
-  // Debug: Log whenever mapPropertyData changes
-  useEffect(() => {
-    console.log(`[DEBUG Home] mapPropertyData derived from ${masterPropertyCollection.properties.length} properties:`, mapPropertyData.map(p => ({ geocode: p.geocode, address: p.address })));
-  }, [mapPropertyData, masterPropertyCollection.properties.length]);
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
@@ -312,6 +300,61 @@ export default function Home() {
         {/* Results Section */}
         {!errorState && (
           <>
+            {/* Accumulated Map - Always show when properties exist */}
+            {mapPropertyData.length > 0 && (
+              <section className="mb-8 fade-in" aria-labelledby="map-section-heading">
+                <Card className="bg-surface border-gray-700 shadow-lg">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle 
+                          id="map-section-heading" 
+                          className="text-xl font-semibold text-on-surface flex items-center space-x-2"
+                        >
+                          <span className="w-5 h-5 bg-blue-500 rounded-full"></span>
+                          <span>Map View</span>
+                        </CardTitle>
+                        <p className="text-on-surface-variant mt-1">
+                          Showing {mapPropertyData.length} {mapPropertyData.length === 1 ? 'property' : 'properties'} on the map
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          onClick={() => setIsMapExpanded(true)}
+                          variant="outline"
+                          size="sm"
+                          className="border-gray-600 hover:bg-gray-700 text-gray-300 hover:text-white"
+                          title="Expand map to full screen"
+                          data-testid="button-expand-map"
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                        </Button>
+                        <Badge variant="secondary" className="bg-blue-800 text-blue-100">
+                          {mapPropertyData.length} {mapPropertyData.length === 1 ? 'Property' : 'Properties'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {!isMapExpanded && (
+                      <div className="w-full" style={{ height: '320px' }}>
+                        <PropertyMap 
+                          key="accumulated-map"
+                          properties={mapPropertyData} 
+                          selectedGeocode={selectedGeocode}
+                        />
+                      </div>
+                    )}
+                    {isMapExpanded && (
+                      <div className="w-full bg-surface-variant rounded-lg border border-gray-600 flex items-center justify-center" style={{ height: '320px' }}>
+                        <p className="text-on-surface-variant">Map expanded to full screen view</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </section>
+            )}
+
             {/* Single Property Results */}
             {propertyData && !isShowingBatch && (
               <PropertyResults 
