@@ -280,6 +280,21 @@ export default function Home() {
             mapMode={mapMode}
             onMapModeChange={setMapMode}
           />
+          
+          {/* Clear Map Button - only show when there are properties to clear */}
+          {masterPropertyCollection.properties.length > 0 && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={clearMasterCollection}
+                className="text-on-surface border-gray-600 hover:bg-surface-variant"
+                data-testid="button-clear-map"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Clear Map ({masterPropertyCollection.properties.length} {masterPropertyCollection.properties.length === 1 ? 'property' : 'properties'})
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Results Section */}
