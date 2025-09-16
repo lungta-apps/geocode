@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { PropertySearchForm } from "@/components/property-search-form";
 import { PropertyResults } from "@/components/property-results";
@@ -91,6 +91,11 @@ export default function Home() {
 
   // Derive map data from master collection
   const mapPropertyData = masterPropertyCollection.properties.map(item => item.property);
+  
+  // Debug: Log whenever mapPropertyData changes
+  useEffect(() => {
+    console.log(`[DEBUG Home] mapPropertyData derived from ${masterPropertyCollection.properties.length} properties:`, mapPropertyData.map(p => ({ geocode: p.geocode, address: p.address })));
+  }, [mapPropertyData, masterPropertyCollection.properties.length]);
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
