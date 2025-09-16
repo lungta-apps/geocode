@@ -402,22 +402,6 @@ export default function Home() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {/* Multi-Property Map */}
-                      {!isMapExpanded && (
-                        <div className="w-full" style={{ height: '320px' }}>
-                          <PropertyMap 
-                            key="inline-map"
-                            properties={mapPropertyData} 
-                            selectedGeocode={selectedGeocode}
-                          />
-                        </div>
-                      )}
-                      {isMapExpanded && (
-                        <div className="w-full bg-surface-variant rounded-lg border border-gray-600 flex items-center justify-center" style={{ height: '320px' }}>
-                          <p className="text-on-surface-variant">Map expanded to full screen view</p>
-                        </div>
-                      )}
-
                       {/* Results Summary and Export Actions */}
                       {batchResults && batchResults.success && batchResults.results.length > 0 && (
                         <div className="mt-6 space-y-4">
