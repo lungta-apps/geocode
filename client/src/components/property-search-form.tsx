@@ -240,8 +240,8 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
         return;
       }
       
-      if (geocodes.length > 10) {
-        setFileValidation({ isValid: false, message: 'Maximum 10 geocodes allowed per batch' });
+      if (geocodes.length > 25) {
+        setFileValidation({ isValid: false, message: 'Maximum 25 geocodes allowed per batch' });
         return;
       }
       
@@ -274,8 +274,8 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
   const handleTextBatchSubmit = () => {
     if (parsedGeocodes.length === 0) return;
     
-    if (parsedGeocodes.length > 10) {
-      setFileValidation({ isValid: false, message: 'Maximum 10 geocodes allowed per batch' });
+    if (parsedGeocodes.length > 25) {
+      setFileValidation({ isValid: false, message: 'Maximum 25 geocodes allowed per batch' });
       return;
     }
     
@@ -478,9 +478,9 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                         </div>
                       ))}
                     </div>
-                    {parsedGeocodes.length > 10 && (
+                    {parsedGeocodes.length > 25 && (
                       <p className="text-xs text-orange-400 mt-2">
-                        ⚠️ Only the first 10 geocodes will be processed
+                        ⚠️ Maximum 25 geocodes allowed - please remove {parsedGeocodes.length - 25} extra geocodes
                       </p>
                     )}
                   </div>

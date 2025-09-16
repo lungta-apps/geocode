@@ -522,7 +522,7 @@ export default function Home() {
           <div className="mt-6 pt-4 border-t border-gray-700">
             <h4 className="text-sm font-semibold text-on-surface mb-2">Batch Processing</h4>
             <p className="text-sm text-on-surface-variant mb-2">
-              For multiple properties, use the "Batch Upload" tab to copy/paste geocodes (one per line) or upload a CSV file with geocodes. Maximum 10 properties per batch.
+              For multiple properties, use the "Batch Upload" tab to copy/paste geocodes (one per line) or upload a CSV file with geocodes. Maximum 25 properties per batch.
             </p>
             <h4 className="text-sm font-semibold text-on-surface mb-2">Need Help Finding a Geocode?</h4>
             <p className="text-sm text-on-surface-variant">
