@@ -1,7 +1,6 @@
 import { PropertyInfo } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PropertyMap } from "./property-map";
 import { Copy, ExternalLink, CheckCircle } from "lucide-react";
 import { useState } from "react";
 
@@ -41,7 +40,7 @@ export function PropertyResults({ property, onCopyAddress, onOpenInMaps }: Prope
 
   return (
     <section className="fade-in" aria-labelledby="results-heading">
-      <div className="grid lg:grid-cols-2 gap-8">
+      <div className="max-w-2xl">
         {/* Property Information Card */}
         <Card className="bg-surface border-gray-700 shadow-lg">
           <CardHeader>
@@ -136,29 +135,6 @@ export function PropertyResults({ property, onCopyAddress, onOpenInMaps }: Prope
                 <span>Open in Maps</span>
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Map Section */}
-        <Card className="bg-surface border-gray-700 shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-on-surface flex items-center space-x-2">
-              <span className="w-5 h-5 bg-primary rounded-full"></span>
-              <span>Property Location</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {property.lat && property.lng ? (
-              <PropertyMap 
-                properties={[property]}
-              />
-            ) : (
-              <div className="w-full h-80 bg-surface-variant rounded-lg border border-gray-600 flex items-center justify-center">
-                <p className="text-on-surface-variant text-center">
-                  Map unavailable - coordinates not found for this property
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
