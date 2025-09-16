@@ -277,6 +277,8 @@ export default function Home() {
             onBatchResults={handleBatchResults}
             onPropertySelect={handlePropertySelect}
             isLoading={searchMutation.isPending}
+            mapMode={mapMode}
+            onMapModeChange={setMapMode}
           />
         </div>
 

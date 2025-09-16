@@ -12,6 +12,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Upload, FileText, CheckCircle, XCircle, List, Eye, Download, RefreshCw, RotateCcw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
@@ -22,9 +23,11 @@ interface PropertySearchFormProps {
   onBatchResults?: (results: BatchApiResponse) => void;
   onPropertySelect?: (geocode: string) => void;
   isLoading: boolean;
+  mapMode: 'replace' | 'add';
+  onMapModeChange: (mode: 'replace' | 'add') => void;
 }
 
-export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect, isLoading }: PropertySearchFormProps) {
+export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect, isLoading, mapMode, onMapModeChange }: PropertySearchFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileValidation, setFileValidation] = useState<{ isValid: boolean; message?: string } | null>(null);
   const [batchResults, setBatchResults] = useState<BatchApiResponse | null>(null);
@@ -402,6 +405,27 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                   )}
                 />
                 
+                {/* Map Mode Toggle for Single Lookup */}
+                <div className="flex items-center space-x-3 p-3 bg-surface-variant rounded-lg border border-gray-600">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="map-mode-single"
+                      checked={mapMode === 'add'}
+                      onCheckedChange={(checked) => onMapModeChange(checked ? 'add' : 'replace')}
+                      data-testid="switch-map-mode-single"
+                    />
+                    <Label htmlFor="map-mode-single" className="text-sm font-medium text-on-surface cursor-pointer">
+                      {mapMode === 'add' ? 'Add to Map' : 'Replace Map'}
+                    </Label>
+                  </div>
+                  <p className="text-xs text-on-surface-variant">
+                    {mapMode === 'add' 
+                      ? 'New properties will be added to existing map results' 
+                      : 'New properties will replace all existing map results'
+                    }
+                  </p>
+                </div>
+                
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     type="submit"
@@ -436,6 +460,27 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
           
           <TabsContent value="batch" className="space-y-4">
             <div className="space-y-6">
+              {/* Map Mode Toggle for Batch Upload */}
+              <div className="flex items-center space-x-3 p-3 bg-surface-variant rounded-lg border border-gray-600">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="map-mode-batch"
+                    checked={mapMode === 'add'}
+                    onCheckedChange={(checked) => onMapModeChange(checked ? 'add' : 'replace')}
+                    data-testid="switch-map-mode-batch"
+                  />
+                  <Label htmlFor="map-mode-batch" className="text-sm font-medium text-on-surface cursor-pointer">
+                    {mapMode === 'add' ? 'Add to Map' : 'Replace Map'}
+                  </Label>
+                </div>
+                <p className="text-xs text-on-surface-variant">
+                  {mapMode === 'add' 
+                    ? 'New properties will be added to existing map results' 
+                    : 'New properties will replace all existing map results'
+                  }
+                </p>
+              </div>
+              
               {/* Textarea Input Section */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium text-on-surface">Copy & Paste Geocodes</Label>
