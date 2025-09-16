@@ -9,6 +9,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { lookupProperty } from "@/lib/geocoding";
 import { PropertyInfo, ApiResponse, BatchApiResponse, BatchPropertyResult } from "@shared/schema";
+
+// Enhanced types for master property collection
+interface PropertyCollectionItem {
+  property: PropertyInfo;
+  source: {
+    type: 'single' | 'batch';
+    batchId?: string;
+    timestamp: string;
+    sourceGeocodes?: string[]; // For batch, list of all geocodes in that batch
+  };
+}
+
+interface MasterPropertyCollection {
+  properties: PropertyCollectionItem[];
+  totalCount: number;
+  lastUpdated: string;
+}
 import { AlertCircle, RotateCcw, HelpCircle, CheckCircle, XCircle, Download, RefreshCw, Loader2, Maximize2, X } from "lucide-react";
 import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
 import { apiRequest } from "@/lib/queryClient";
@@ -20,15 +37,53 @@ interface ToastState {
 }
 
 export default function Home() {
+  // Legacy state (keeping for backward compatibility during transition)
   const [propertyData, setPropertyData] = useState<PropertyInfo | null>(null);
   const [batchPropertyData, setBatchPropertyData] = useState<PropertyInfo[]>([]);
+  const [batchResults, setBatchResults] = useState<BatchApiResponse | null>(null);
+  
+  // Master property collection state
+  const [masterPropertyCollection, setMasterPropertyCollection] = useState<MasterPropertyCollection>({
+    properties: [],
+    totalCount: 0,
+    lastUpdated: new Date().toISOString()
+  });
+  
+  // Map mode toggle state - "replace" is the default
+  const [mapMode, setMapMode] = useState<'replace' | 'add'>('replace');
+  
+  // Other existing state
   const [errorState, setErrorState] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ show: false, message: "", type: "info" });
   const [isShowingBatch, setIsShowingBatch] = useState(false);
   const [selectedGeocode, setSelectedGeocode] = useState<string | null>(null);
-  const [batchResults, setBatchResults] = useState<BatchApiResponse | null>(null);
   const [retryingGeocodes, setRetryingGeocodes] = useState<Set<string>>(new Set());
   const [isMapExpanded, setIsMapExpanded] = useState(false);
+
+  // Helper functions for master property collection
+  const addToMasterCollection = (properties: PropertyInfo[], source: PropertyCollectionItem['source']) => {
+    const newItems: PropertyCollectionItem[] = properties.map(property => ({
+      property,
+      source
+    }));
+
+    setMasterPropertyCollection(prev => ({
+      properties: mapMode === 'replace' ? newItems : [...prev.properties, ...newItems],
+      totalCount: mapMode === 'replace' ? newItems.length : prev.totalCount + newItems.length,
+      lastUpdated: new Date().toISOString()
+    }));
+  };
+
+  const clearMasterCollection = () => {
+    setMasterPropertyCollection({
+      properties: [],
+      totalCount: 0,
+      lastUpdated: new Date().toISOString()
+    });
+  };
+
+  // Derive map data from master collection
+  const mapPropertyData = masterPropertyCollection.properties.map(item => item.property);
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
@@ -36,6 +91,13 @@ export default function Home() {
       if (response.success && response.data) {
         setPropertyData(response.data);
         setErrorState(null);
+        
+        // Add to master collection
+        addToMasterCollection([response.data], {
+          type: 'single',
+          timestamp: new Date().toISOString()
+        });
+        
         showToast("Property information loaded successfully!", "success");
       } else {
         setPropertyData(null);
@@ -57,7 +119,7 @@ export default function Home() {
   };
 
   const handleSearch = (geocode: string) => {
-    // Clear batch results when doing single search
+    // Clear batch results when doing single search (legacy state)
     setBatchPropertyData([]);
     setIsShowingBatch(false);
     searchMutation.mutate(geocode);
@@ -78,6 +140,16 @@ export default function Home() {
         setIsShowingBatch(true);
         setErrorState(null);
         setSelectedGeocode(null); // Clear selection when new batch loads
+        
+        // Add to master collection
+        const batchId = batchResults.batchId || `batch_${Date.now()}`;
+        const requestedGeocodes = batchResults.results.map(r => r.geocode);
+        addToMasterCollection(successfulProperties, {
+          type: 'batch',
+          batchId,
+          timestamp: new Date().toISOString(),
+          sourceGeocodes: requestedGeocodes
+        });
         
         const total = batchResults.totalRequested;
         const successful = batchResults.totalSuccessful;
@@ -263,7 +335,7 @@ export default function Home() {
                         <div className="w-full" style={{ height: '320px' }}>
                           <PropertyMap 
                             key="inline-map"
-                            properties={batchPropertyData} 
+                            properties={mapPropertyData} 
                             selectedGeocode={selectedGeocode}
                           />
                         </div>
@@ -392,7 +464,7 @@ export default function Home() {
         )}
 
         {/* Full-Screen Map Modal */}
-        {isMapExpanded && batchPropertyData.length > 0 && (
+        {isMapExpanded && mapPropertyData.length > 0 && (
           <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center p-4">
             <div className="w-full h-full max-w-7xl bg-surface rounded-lg border border-gray-700 flex flex-col">
               {/* Modal Header */}
@@ -400,7 +472,7 @@ export default function Home() {
                 <div className="flex items-center space-x-2">
                   <span className="w-4 h-4 bg-green-500 rounded-full"></span>
                   <h2 className="text-lg font-semibold text-on-surface">
-                    Map View - {batchPropertyData.length} Properties
+                    Map View - {mapPropertyData.length} Properties
                   </h2>
                 </div>
                 <Button
@@ -419,8 +491,8 @@ export default function Home() {
               <div className="flex-1 p-4 overflow-hidden flex flex-col">
                 <div className="w-full flex-1 rounded-lg overflow-hidden">
                   <PropertyMap 
-                    key={`expanded-map-${isMapExpanded}-${batchPropertyData.length}`}
-                    properties={batchPropertyData} 
+                    key={`expanded-map-${isMapExpanded}-${mapPropertyData.length}`}
+                    properties={mapPropertyData} 
                     selectedGeocode={selectedGeocode}
                   />
                 </div>
