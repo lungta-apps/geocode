@@ -62,16 +62,23 @@ export default function Home() {
 
   // Helper functions for master property collection
   const addToMasterCollection = (properties: PropertyInfo[], source: PropertyCollectionItem['source']) => {
+    console.log(`[DEBUG] addToMasterCollection called with mode: ${mapMode}, properties count: ${properties.length}, source:`, source);
+    console.log(`[DEBUG] Current master collection size: ${masterPropertyCollection.properties.length}`);
+    
     const newItems: PropertyCollectionItem[] = properties.map(property => ({
       property,
       source
     }));
 
-    setMasterPropertyCollection(prev => ({
-      properties: mapMode === 'replace' ? newItems : [...prev.properties, ...newItems],
-      totalCount: mapMode === 'replace' ? newItems.length : prev.totalCount + newItems.length,
-      lastUpdated: new Date().toISOString()
-    }));
+    setMasterPropertyCollection(prev => {
+      const result = {
+        properties: mapMode === 'replace' ? newItems : [...prev.properties, ...newItems],
+        totalCount: mapMode === 'replace' ? newItems.length : prev.totalCount + newItems.length,
+        lastUpdated: new Date().toISOString()
+      };
+      console.log(`[DEBUG] Master collection updated. New size: ${result.properties.length}, mode was: ${mapMode}`);
+      return result;
+    });
   };
 
   const clearMasterCollection = () => {
