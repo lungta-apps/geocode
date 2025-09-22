@@ -93,6 +93,14 @@ export default function Home() {
   const filteredMapData = selectedPropertyGeocodes.length > 0 
     ? mapPropertyData.filter(property => selectedPropertyGeocodes.includes(property.geocode))
     : mapPropertyData;
+    
+  // Filter batch results based on selection
+  const filteredBatchResults = selectedPropertyGeocodes.length > 0 && batchResults 
+    ? {
+        ...batchResults,
+        results: batchResults.results.filter(result => selectedPropertyGeocodes.includes(result.geocode))
+      }
+    : batchResults;
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
@@ -475,12 +483,14 @@ export default function Home() {
                     </CardHeader>
                     <CardContent>
                       {/* Results Summary and Export Actions */}
-                      {batchResults && batchResults.success && batchResults.results.length > 0 && (
+                      {filteredBatchResults && filteredBatchResults.success && filteredBatchResults.results.length > 0 && (
                         <div className="mt-6 space-y-4">
                           <div className="space-y-2">
-                            <h4 className="text-sm font-medium text-on-surface">Results Summary:</h4>
+                            <h4 className="text-sm font-medium text-on-surface">
+                              {selectedPropertyGeocodes.length > 0 ? 'Selected Properties:' : 'Results Summary:'}
+                            </h4>
                             <div className="max-h-40 overflow-y-auto space-y-1">
-                              {batchResults.results.map((result, index) => (
+                              {filteredBatchResults.results.map((result, index) => (
                                 <div key={index} className="flex items-center justify-between p-2 bg-surface-variant rounded text-xs">
                                   <div className="flex items-center space-x-2 flex-1">
                                     <span className="font-mono">{result.geocode}</span>
