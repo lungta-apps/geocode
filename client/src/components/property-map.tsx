@@ -1,9 +1,11 @@
 import { useEffect, useRef, useMemo, memo } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet-draw/dist/leaflet.draw.css";
 import L from "leaflet";
+import "leaflet-draw";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, MousePointer, Circle } from "lucide-react";
 import { PropertyInfo } from "@shared/schema";
 
 // Fix for default markers in React Leaflet
@@ -17,6 +19,9 @@ L.Icon.Default.mergeOptions({
 interface PropertyMapProps {
   properties: PropertyInfo[];
   selectedGeocode?: string | null;
+  isSelectionMode?: boolean;
+  onPropertySelection?: (geocodes: string[]) => void;
+  selectedPropertyGeocodes?: string[];
 }
 
 interface PropertyWithColor extends PropertyInfo {
@@ -72,6 +77,148 @@ function MapController({ properties }: { properties: PropertyInfo[] }) {
   return null;
 }
 
+// Drawing control component for property selection
+interface DrawingControlProps {
+  isSelectionMode: boolean;
+  onPropertySelection: (geocodes: string[]) => void;
+  properties: PropertyInfo[];
+  selectedPropertyGeocodes: string[];
+}
+
+function DrawingControl({ isSelectionMode, onPropertySelection, properties, selectedPropertyGeocodes }: DrawingControlProps) {
+  const map = useMap();
+  const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
+
+  useEffect(() => {
+    if (!isSelectionMode) {
+      // Clean up when not in selection mode
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
+      }
+      if (drawnItemsRef.current) {
+        map.removeLayer(drawnItemsRef.current);
+        drawnItemsRef.current = null;
+      }
+      return;
+    }
+
+    // Initialize feature group for drawn items
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    drawnItemsRef.current = drawnItems;
+
+    // Initialize draw controls
+    const drawControl = new L.Control.Draw({
+      edit: {
+        featureGroup: drawnItems,
+      },
+      draw: {
+        polyline: false,
+        polygon: {},
+        circle: {},
+        rectangle: {},
+        marker: false,
+        circlemarker: false,
+      },
+    });
+    
+    map.addControl(drawControl);
+    drawControlRef.current = drawControl;
+
+    // Handle draw events
+    const handleDrawCreated = (e: L.LeafletEvent) => {
+      const drawEvent = e as L.DrawEvents.Created;
+      const layer = drawEvent.layer;
+      
+      // Clear previous selections
+      drawnItems.clearLayers();
+      drawnItems.addLayer(layer);
+      
+      // Find properties within the drawn area
+      const selectedGeocodes = findPropertiesInShape(layer, properties);
+      onPropertySelection(selectedGeocodes);
+    };
+    
+    const handleDrawDeleted = () => {
+      onPropertySelection([]);
+    };
+
+    map.on(L.Draw.Event.CREATED, handleDrawCreated);
+    map.on(L.Draw.Event.DELETED, handleDrawDeleted);
+    map.on(L.Draw.Event.EDITED, handleDrawCreated);
+
+    return () => {
+      map.off(L.Draw.Event.CREATED, handleDrawCreated);
+      map.off(L.Draw.Event.DELETED, handleDrawDeleted);
+      map.off(L.Draw.Event.EDITED, handleDrawCreated);
+      
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+      }
+      if (drawnItemsRef.current) {
+        map.removeLayer(drawnItemsRef.current);
+      }
+    };
+  }, [isSelectionMode, map, onPropertySelection, properties]);
+
+  return null;
+}
+
+// Function to find properties within a drawn shape
+function findPropertiesInShape(layer: L.Layer, properties: PropertyInfo[]): string[] {
+  const selectedGeocodes: string[] = [];
+  
+  properties.forEach(property => {
+    if (!property.lat || !property.lng) return;
+    
+    const propertyLatLng = L.latLng(property.lat, property.lng);
+    let isInside = false;
+    
+    if (layer instanceof L.Circle) {
+      const distance = layer.getLatLng().distanceTo(propertyLatLng);
+      isInside = distance <= layer.getRadius();
+    } else if (layer instanceof L.Rectangle) {
+      isInside = layer.getBounds().contains(propertyLatLng);
+    } else if (layer instanceof L.Polygon) {
+      // For polygon, check if point is inside using ray casting
+      const bounds = layer.getBounds();
+      if (bounds.contains(propertyLatLng)) {
+        // Simple point-in-polygon check
+        const polygon = layer.getLatLngs()[0] as L.LatLng[];
+        isInside = isPointInPolygon(propertyLatLng, polygon);
+      }
+    }
+    
+    if (isInside) {
+      selectedGeocodes.push(property.geocode);
+    }
+  });
+  
+  return selectedGeocodes;
+}
+
+// Ray casting algorithm for point-in-polygon detection
+function isPointInPolygon(point: L.LatLng, polygon: L.LatLng[]): boolean {
+  const x = point.lng;
+  const y = point.lat;
+  let inside = false;
+  
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].lng;
+    const yi = polygon[i].lat;
+    const xj = polygon[j].lng;
+    const yj = polygon[j].lat;
+    
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  
+  return inside;
+}
+
 function ZoomControls() {
   const map = useMap();
 
@@ -99,7 +246,13 @@ function ZoomControls() {
   );
 }
 
-export const PropertyMap = memo(function PropertyMap({ properties, selectedGeocode }: PropertyMapProps) {
+export const PropertyMap = memo(function PropertyMap({ 
+  properties, 
+  selectedGeocode,
+  isSelectionMode = false,
+  onPropertySelection,
+  selectedPropertyGeocodes = [] 
+}: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   
   // Memoized processing of properties with single color and performance optimizations
@@ -196,20 +349,64 @@ export const PropertyMap = memo(function PropertyMap({ properties, selectedGeoco
           maxZoom={20}
         />
         
+        {/* Drawing control for property selection */}
+        {isSelectionMode && (
+          <DrawingControl 
+            isSelectionMode={isSelectionMode}
+            onPropertySelection={onPropertySelection!}
+            properties={properties}
+            selectedPropertyGeocodes={selectedPropertyGeocodes}
+          />
+        )}
+        
         {/* Render all properties with highlighting */}
         {propertiesWithColors.map((property) => {
           const isSelected = selectedGeocode === property.geocode;
           const isAnySelected = selectedGeocode !== null;
           const shouldBeDimmed = isAnySelected && !isSelected;
           
-          // Determine colors and opacity based on selection state
-          const polygonColor = isSelected ? SELECTED_COLOR : PROPERTY_COLOR;
-          const polygonOpacity = shouldBeDimmed ? UNSELECTED_OPACITY : 1;
-          const fillOpacity = isSelected ? 0.2 : (shouldBeDimmed ? 0.05 : 0.1);
-          const weight = isSelected ? 3 : 2;
+          // Check if property is in the current selection group
+          const isInSelectionGroup = selectedPropertyGeocodes.includes(property.geocode);
+          const isSelectionActive = selectedPropertyGeocodes.length > 0;
+          const shouldBeDimmedBySelection = isSelectionActive && !isInSelectionGroup;
           
-          // Choose appropriate icon
-          const markerIcon = isSelected ? selectedIcon : (shouldBeDimmed ? dimmedIcon : unselectedIcon);
+          // Determine colors and opacity based on selection state and group selection
+          let polygonColor = PROPERTY_COLOR;
+          let polygonOpacity = 1;
+          let fillOpacity = 0.1;
+          let weight = 2;
+          
+          if (isSelected) {
+            // Individual property selection (from clicking)
+            polygonColor = SELECTED_COLOR;
+            weight = 3;
+            fillOpacity = 0.2;
+          } else if (isInSelectionGroup) {
+            // Property is in the current selection group
+            polygonColor = '#4CAF50'; // Green for group selection
+            weight = 3;
+            fillOpacity = 0.15;
+          } else if (shouldBeDimmed || shouldBeDimmedBySelection) {
+            // Dimmed when other properties are selected or when not in selection group
+            polygonOpacity = UNSELECTED_OPACITY;
+            fillOpacity = 0.05;
+          }
+          
+          // Choose appropriate icon based on selection states
+          let markerIcon = unselectedIcon;
+          if (isSelected) {
+            markerIcon = selectedIcon;
+          } else if (isInSelectionGroup) {
+            // Create a special icon for group-selected properties
+            markerIcon = L.divIcon({
+              className: 'custom-marker-group-selected',
+              html: `<div style="background-color: #4CAF50; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>`,
+              iconSize: [28, 28],
+              iconAnchor: [14, 14]
+            });
+          } else if (shouldBeDimmed || shouldBeDimmedBySelection) {
+            markerIcon = dimmedIcon;
+          }
           
           return (
             <div key={`property-${property.geocode}-${property.colorIndex}`}>

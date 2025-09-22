@@ -26,7 +26,7 @@ interface MasterPropertyCollection {
   totalCount: number;
   lastUpdated: string;
 }
-import { AlertCircle, RotateCcw, HelpCircle, CheckCircle, XCircle, Download, RefreshCw, Loader2, Maximize2, X } from "lucide-react";
+import { AlertCircle, RotateCcw, HelpCircle, CheckCircle, XCircle, Download, RefreshCw, Loader2, Maximize2, X, Circle } from "lucide-react";
 import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -59,6 +59,10 @@ export default function Home() {
   const [selectedGeocode, setSelectedGeocode] = useState<string | null>(null);
   const [retryingGeocodes, setRetryingGeocodes] = useState<Set<string>>(new Set());
   const [isMapExpanded, setIsMapExpanded] = useState(false);
+  
+  // Selection state for property grouping feature
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedPropertyGeocodes, setSelectedPropertyGeocodes] = useState<string[]>([]);
 
   // Helper functions for master property collection
   const addToMasterCollection = (properties: PropertyInfo[], source: PropertyCollectionItem['source']) => {
@@ -84,6 +88,11 @@ export default function Home() {
 
   // Derive map data from master collection
   const mapPropertyData = masterPropertyCollection.properties.map(item => item.property);
+  
+  // Filter properties based on selection
+  const filteredMapData = selectedPropertyGeocodes.length > 0 
+    ? mapPropertyData.filter(property => selectedPropertyGeocodes.includes(property.geocode))
+    : mapPropertyData;
 
   const searchMutation = useMutation({
     mutationFn: lookupProperty,
@@ -224,6 +233,28 @@ export default function Home() {
   const handlePropertySelect = (geocode: string) => {
     setSelectedGeocode(geocode);
   };
+  
+  // Selection mode handlers
+  const handleToggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (isSelectionMode) {
+      // Clear selection when exiting selection mode
+      setSelectedPropertyGeocodes([]);
+    }
+  };
+  
+  const handlePropertySelection = (geocodes: string[]) => {
+    setSelectedPropertyGeocodes(geocodes);
+    if (geocodes.length > 0) {
+      const count = geocodes.length;
+      showToast(`Selected ${count} ${count === 1 ? 'property' : 'properties'} for focused view`, 'success');
+    }
+  };
+  
+  const handleClearSelection = () => {
+    setSelectedPropertyGeocodes([]);
+    showToast('Selection cleared - showing all properties', 'info');
+  };
 
   const handleCopyAddress = (address: string) => {
     showToast("Address copied to clipboard!", "success");
@@ -319,6 +350,44 @@ export default function Home() {
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
+                        {/* Selection Mode Controls */}
+                        {mapPropertyData.length > 1 && (
+                          <div className="flex items-center space-x-2 mr-2">
+                            <Button
+                              onClick={handleToggleSelectionMode}
+                              variant={isSelectionMode ? "default" : "outline"}
+                              size="sm"
+                              className={isSelectionMode ? 
+                                "bg-green-600 hover:bg-green-700 text-white" : 
+                                "border-gray-600 hover:bg-gray-700 text-gray-300 hover:text-white"
+                              }
+                              title="Toggle property selection mode"
+                              data-testid="button-toggle-selection"
+                            >
+                              <Circle className="h-4 w-4 mr-1" />
+                              {isSelectionMode ? 'Exit Selection' : 'Select Group'}
+                            </Button>
+                            
+                            {selectedPropertyGeocodes.length > 0 && (
+                              <>
+                                <Button
+                                  onClick={handleClearSelection}
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-red-600 hover:bg-red-700 text-red-300 hover:text-white"
+                                  title="Clear current selection"
+                                  data-testid="button-clear-selection"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                                <Badge variant="secondary" className="bg-green-800 text-green-100">
+                                  {selectedPropertyGeocodes.length} Selected
+                                </Badge>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        
                         <Button
                           onClick={() => setIsMapExpanded(true)}
                           variant="outline"
@@ -330,7 +399,7 @@ export default function Home() {
                           <Maximize2 className="h-4 w-4" />
                         </Button>
                         <Badge variant="secondary" className="bg-blue-800 text-blue-100">
-                          {mapPropertyData.length} {mapPropertyData.length === 1 ? 'Property' : 'Properties'}
+                          {selectedPropertyGeocodes.length > 0 ? filteredMapData.length : mapPropertyData.length} {selectedPropertyGeocodes.length > 0 ? 'Selected' : ''} {(selectedPropertyGeocodes.length > 0 ? filteredMapData.length : mapPropertyData.length) === 1 ? 'Property' : 'Properties'}
                         </Badge>
                       </div>
                     </div>
@@ -340,8 +409,11 @@ export default function Home() {
                       <div className="w-full" style={{ height: '320px' }}>
                         <PropertyMap 
                           key="accumulated-map"
-                          properties={mapPropertyData} 
+                          properties={isSelectionMode ? mapPropertyData : filteredMapData} 
                           selectedGeocode={selectedGeocode}
+                          isSelectionMode={isSelectionMode}
+                          onPropertySelection={handlePropertySelection}
+                          selectedPropertyGeocodes={selectedPropertyGeocodes}
                         />
                       </div>
                     )}
@@ -548,8 +620,11 @@ export default function Home() {
                 <div className="w-full flex-1 rounded-lg overflow-hidden">
                   <PropertyMap 
                     key={`expanded-map-${isMapExpanded}-${mapPropertyData.length}`}
-                    properties={mapPropertyData} 
+                    properties={isSelectionMode ? mapPropertyData : filteredMapData} 
                     selectedGeocode={selectedGeocode}
+                    isSelectionMode={isSelectionMode}
+                    onPropertySelection={handlePropertySelection}
+                    selectedPropertyGeocodes={selectedPropertyGeocodes}
                   />
                 </div>
               </div>
