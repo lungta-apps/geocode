@@ -600,19 +600,59 @@ export default function Home() {
                 <div className="flex items-center space-x-2">
                   <span className="w-4 h-4 bg-green-500 rounded-full"></span>
                   <h2 className="text-lg font-semibold text-on-surface">
-                    Map View - {mapPropertyData.length} Properties
+                    Map View - {selectedPropertyGeocodes.length > 0 ? filteredMapData.length : mapPropertyData.length} {selectedPropertyGeocodes.length > 0 ? 'Selected' : ''} Properties
                   </h2>
                 </div>
-                <Button
-                  onClick={() => setIsMapExpanded(false)}
-                  variant="ghost"
-                  size="sm"
-                  className="hover:bg-gray-700 text-gray-400 hover:text-white"
-                  title="Close full screen view"
-                  data-testid="button-close-expanded-map"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
+                <div className="flex items-center space-x-2">
+                  {/* Selection Mode Controls for Expanded View */}
+                  {mapPropertyData.length > 1 && (
+                    <div className="flex items-center space-x-2 mr-2">
+                      <Button
+                        onClick={handleToggleSelectionMode}
+                        variant={isSelectionMode ? "default" : "outline"}
+                        size="sm"
+                        className={isSelectionMode ? 
+                          "bg-green-600 hover:bg-green-700 text-white" : 
+                          "border-gray-600 hover:bg-gray-700 text-gray-300 hover:text-white"
+                        }
+                        title="Toggle property selection mode"
+                        data-testid="button-toggle-selection-expanded"
+                      >
+                        <Circle className="h-4 w-4 mr-1" />
+                        {isSelectionMode ? 'Exit Selection' : 'Select Group'}
+                      </Button>
+                      
+                      {selectedPropertyGeocodes.length > 0 && (
+                        <>
+                          <Button
+                            onClick={handleClearSelection}
+                            variant="outline"
+                            size="sm"
+                            className="border-red-600 hover:bg-red-700 text-red-300 hover:text-white"
+                            title="Clear current selection"
+                            data-testid="button-clear-selection-expanded"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          <Badge variant="secondary" className="bg-green-800 text-green-100">
+                            {selectedPropertyGeocodes.length} Selected
+                          </Badge>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  
+                  <Button
+                    onClick={() => setIsMapExpanded(false)}
+                    variant="ghost"
+                    size="sm"
+                    className="hover:bg-gray-700 text-gray-400 hover:text-white"
+                    title="Close full screen view"
+                    data-testid="button-close-expanded-map"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
               
               {/* Expanded Map Container */}
