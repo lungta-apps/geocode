@@ -209,13 +209,16 @@ export default function Home() {
   const handleExportCSV = (includeAll: boolean) => {
     if (!batchResults) return;
     
+    // Use filtered results if in selection mode, otherwise use original batch results
+    const batchToExport = selectedPropertyGeocodes.length > 0 ? filteredBatchResults! : batchResults;
+    
     const resultsToExport = includeAll 
-      ? batchResults.results 
-      : batchResults.results.filter(result => result.success);
+      ? batchToExport.results 
+      : batchToExport.results.filter(result => result.success);
       
-    const csvContent = batchResultsToCSV(resultsToExport, {
+    const csvContent = batchResultsToCSV(batchToExport, {
       includeMetadata: true,
-      includeFailedResults: includeAll
+      includeFailedRows: includeAll
     });
     
     const filename = generateCsvFilename(includeAll ? 'all' : 'successful');
