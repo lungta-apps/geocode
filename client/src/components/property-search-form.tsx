@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import * as XLSX from 'xlsx';
 import { geocodeSearchSchema, GeocodeSearch, BatchApiResponse } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,6 +163,40 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
     return Array.from(new Set(geocodes)); // Remove duplicates
   };
 
+  const parseFileContent = async (file: File): Promise<string[]> => {
+    const fileName = file.name.toLowerCase();
+    
+    // Handle Excel files
+    if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        
+        // Check if file has more than one worksheet
+        if (workbook.SheetNames.length > 1) {
+          throw new Error('Excel file contains multiple worksheets. Please save only the sheet with geocodes as a separate file.');
+        }
+        
+        // Get the first (and only) worksheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        // Convert to CSV format and parse
+        const csvData = XLSX.utils.sheet_to_csv(worksheet);
+        return parseTextInput(csvData);
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('Failed to parse Excel file');
+      }
+    }
+    
+    // Handle CSV files (existing logic)
+    const text = await file.text();
+    return parseTextInput(text);
+  };
+
   // Export functions
   const handleExportCSV = (includeFailedRows: boolean = true) => {
     if (!batchResults) return;
@@ -198,9 +233,15 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
   };
 
   const validateFile = (file: File): { isValid: boolean; message?: string } => {
-    // Check file type
-    if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
-      return { isValid: false, message: 'Please select a CSV file' };
+    // Check file type - accept CSV and Excel files
+    const fileName = file.name.toLowerCase();
+    const isCSV = fileName.endsWith('.csv') || file.type === 'text/csv';
+    const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || 
+                   file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                   file.type === 'application/vnd.ms-excel';
+    
+    if (!isCSV && !isExcel) {
+      return { isValid: false, message: 'Please select a CSV or Excel file (.csv, .xlsx, .xls)' };
     }
     
     // Check file size (5MB limit)
@@ -235,8 +276,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
     if (!selectedFile) return;
 
     try {
-      const text = await selectedFile.text();
-      const geocodes = parseTextInput(text);
+      const geocodes = await parseFileContent(selectedFile);
       
       if (geocodes.length === 0) {
         setFileValidation({ isValid: false, message: 'No valid geocodes found in the file' });
@@ -255,7 +295,8 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
       
       batchMutation.mutate(geocodes);
     } catch (error) {
-      setFileValidation({ isValid: false, message: 'Failed to read the file' });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to read the file';
+      setFileValidation({ isValid: false, message: errorMessage });
     }
   };
 
@@ -315,22 +356,26 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
     setDragActive(false);
     
     const files = Array.from(e.dataTransfer.files);
-    const csvFile = files.find(file => 
-      file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv'
-    );
+    const supportedFile = files.find(file => {
+      const fileName = file.name.toLowerCase();
+      return fileName.endsWith('.csv') || fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || 
+             file.type === 'text/csv' || 
+             file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+             file.type === 'application/vnd.ms-excel';
+    });
     
-    if (csvFile) {
-      const validation = validateFile(csvFile);
+    if (supportedFile) {
+      const validation = validateFile(supportedFile);
       setFileValidation(validation);
       
       if (validation.isValid) {
-        setSelectedFile(csvFile);
+        setSelectedFile(supportedFile);
         setBatchResults(null);
       } else {
         setSelectedFile(null);
       }
     } else {
-      setFileValidation({ isValid: false, message: 'Please drop a CSV file' });
+      setFileValidation({ isValid: false, message: 'Please drop a CSV or Excel file (.csv, .xlsx, .xls)' });
     }
   };
 
@@ -577,7 +622,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
               
               {/* File Upload Section */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium text-on-surface">Upload CSV File</Label>
+                <Label className="text-sm font-medium text-on-surface">Upload CSV or Excel File</Label>
                 <div className="mt-2">
                   <div className="flex items-center justify-center w-full">
                     <label
@@ -598,13 +643,13 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                         <p className="mb-2 text-sm text-gray-400">
                           <span className="font-semibold">Click to upload</span> or drag and drop
                         </p>
-                        <p className="text-xs text-gray-500">CSV files only (max 5MB)</p>
+                        <p className="text-xs text-gray-500">CSV or Excel files (.csv, .xlsx, .xls) - max 5MB</p>
                       </div>
                       <input
                         id="csv-upload"
                         ref={fileInputRef}
                         type="file"
-                        accept=".csv,text/csv"
+                        accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                         onChange={handleFileChange}
                         className="hidden"
                         data-testid="input-file-upload"
@@ -612,7 +657,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                     </label>
                   </div>
                   <p className="mt-2 text-xs text-on-surface-variant">
-                    Upload a CSV file with geocodes. The file should contain one geocode per row, or you can include column headers.
+                    Upload a CSV or Excel file with geocodes. The file should contain one geocode per row, or you can include column headers. Excel files must have only one worksheet.
                   </p>
                 </div>
               </div>
