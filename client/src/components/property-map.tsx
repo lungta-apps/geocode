@@ -118,7 +118,7 @@ function DrawingControl({ isSelectionMode, onPropertySelection, properties, sele
         polyline: false,
         polygon: {},
         circle: {},
-        rectangle: {},
+        rectangle: false,
         marker: false,
         circlemarker: false,
       },
