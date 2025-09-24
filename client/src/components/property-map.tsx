@@ -465,8 +465,9 @@ export const PropertyMap = memo(function PropertyMap({
           ref={mapRef}
         >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          key={currentBasemap.id}
+          attribution={currentBasemap.attribution}
+          url={currentBasemap.url}
           subdomains={['a', 'b', 'c', 'd']}
           maxZoom={20}
         />
