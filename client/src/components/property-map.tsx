@@ -296,6 +296,29 @@ export const PropertyMap = memo(function PropertyMap({
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   
+  // Basemap state management with localStorage persistence
+  const [selectedBasemap, setSelectedBasemap] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('map-basemap-preference');
+      if (saved && BASEMAP_OPTIONS.find(option => option.id === saved)) {
+        return saved;
+      }
+    }
+    return DEFAULT_BASEMAP;
+  });
+
+  // Persist basemap selection to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('map-basemap-preference', selectedBasemap);
+    }
+  }, [selectedBasemap]);
+
+  // Get current basemap configuration
+  const currentBasemap = useMemo(() => {
+    return BASEMAP_OPTIONS.find(option => option.id === selectedBasemap) || BASEMAP_OPTIONS[0];
+  }, [selectedBasemap]);
+  
   // Memoized processing of properties with single color and performance optimizations
   const propertiesWithColors: PropertyWithColor[] = useMemo(() => {
     const validProperties = properties.filter(p => p.lat && p.lng);
