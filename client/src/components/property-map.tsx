@@ -328,7 +328,7 @@ function MapControls({
   const map = useMap();
 
   return (
-    <div className="absolute top-4 right-4 flex flex-col space-y-2 z-10">
+    <div className="absolute top-4 right-4 flex flex-col space-y-2 z-50">
       <BasemapSelector 
         selectedBasemap={selectedBasemap}
         onBasemapChange={onBasemapChange}
@@ -459,12 +459,12 @@ export const PropertyMap = memo(function PropertyMap({
   }, []);
 
   return (
-    <div className="relative h-full">
+    <div className="relative h-full overflow-visible">
       <div
         role="img"
         aria-label={`Interactive map showing ${propertiesWithColors.length} ${propertiesWithColors.length === 1 ? 'property' : 'properties'}`}
         data-testid="map-container"
-        className="h-full"
+        className="h-full overflow-visible"
       >
         <MapContainer
           center={[centerLat, centerLng]}
