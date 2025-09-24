@@ -260,6 +260,64 @@ function isPointInPolygon(point: L.LatLng, polygon: L.LatLng[]): boolean {
   return inside;
 }
 
+function BasemapSelector({ 
+  selectedBasemap, 
+  onBasemapChange 
+}: { 
+  selectedBasemap: string; 
+  onBasemapChange: (basemapId: string) => void;
+}) {
+  const currentBasemap = BASEMAP_OPTIONS.find(option => option.id === selectedBasemap) || BASEMAP_OPTIONS[0];
+  
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          className="bg-surface hover:bg-surface-variant text-on-surface p-2 rounded-lg shadow-lg border border-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
+          aria-label="Select basemap"
+          data-testid="button-basemap-selector"
+          size="sm"
+        >
+          <Map className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent 
+        align="end" 
+        className="bg-surface border-gray-600 text-on-surface min-w-48"
+        sideOffset={8}
+      >
+        <div className="px-2 py-1 text-xs text-gray-400 font-medium">
+          Choose Basemap
+        </div>
+        {BASEMAP_OPTIONS.map((basemap) => (
+          <DropdownMenuItem
+            key={basemap.id}
+            onClick={() => onBasemapChange(basemap.id)}
+            className="focus:bg-surface-variant cursor-pointer px-2 py-2"
+            data-testid={`basemap-option-${basemap.id}`}
+          >
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-center space-x-2">
+                <div 
+                  className={`w-3 h-3 rounded-full border ${
+                    selectedBasemap === basemap.id 
+                      ? 'bg-primary border-primary' 
+                      : 'border-gray-400'
+                  }`}
+                />
+                <span className="font-medium text-sm">{basemap.name}</span>
+              </div>
+              <span className="text-xs text-gray-400 ml-5">
+                {basemap.description}
+              </span>
+            </div>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function ZoomControls() {
   const map = useMap();
 
