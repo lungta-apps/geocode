@@ -1,12 +1,53 @@
-import { useEffect, useRef, useMemo, memo } from "react";
+import { useEffect, useRef, useMemo, memo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 import L from "leaflet";
 import "leaflet-draw";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, MousePointer, Circle } from "lucide-react";
+import { Plus, Minus, MousePointer, Circle, Map } from "lucide-react";
 import { PropertyInfo } from "@shared/schema";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Basemap configuration
+interface BasemapConfig {
+  id: string;
+  name: string;
+  url: string;
+  attribution: string;
+  description: string;
+}
+
+const BASEMAP_OPTIONS: BasemapConfig[] = [
+  {
+    id: 'dark',
+    name: 'Dark Matter',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    description: 'Dark theme ideal for highlighting data'
+  },
+  {
+    id: 'light',
+    name: 'Positron',
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    description: 'Clean light theme'
+  },
+  {
+    id: 'voyager',
+    name: 'Voyager',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    description: 'Balanced neutral theme'
+  }
+];
+
+const DEFAULT_BASEMAP = 'dark';
 
 // Fix for default markers in React Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
