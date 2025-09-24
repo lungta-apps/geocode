@@ -318,21 +318,11 @@ function BasemapSelector({
   );
 }
 
-function MapControls({ 
-  selectedBasemap, 
-  onBasemapChange 
-}: { 
-  selectedBasemap: string; 
-  onBasemapChange: (basemapId: string) => void; 
-}) {
+function ZoomControls() {
   const map = useMap();
 
   return (
-    <div className="absolute top-4 right-4 flex flex-col space-y-2 z-50">
-      <BasemapSelector 
-        selectedBasemap={selectedBasemap}
-        onBasemapChange={onBasemapChange}
-      />
+    <div className="absolute top-14 right-4 flex flex-col space-y-2 z-50">
       <Button
         onClick={() => map.zoomIn()}
         className="bg-surface hover:bg-surface-variant text-on-surface p-2 rounded-lg shadow-lg border border-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -351,6 +341,23 @@ function MapControls({
       >
         <Minus className="h-4 w-4" />
       </Button>
+    </div>
+  );
+}
+
+function BasemapControls({ 
+  selectedBasemap, 
+  onBasemapChange 
+}: { 
+  selectedBasemap: string; 
+  onBasemapChange: (basemapId: string) => void; 
+}) {
+  return (
+    <div className="absolute top-4 right-4 z-50">
+      <BasemapSelector 
+        selectedBasemap={selectedBasemap}
+        onBasemapChange={onBasemapChange}
+      />
     </div>
   );
 }
@@ -589,13 +596,15 @@ export const PropertyMap = memo(function PropertyMap({
         })}
         
           <MapController properties={propertiesWithColors} />
-          <MapControls 
-            selectedBasemap={selectedBasemap}
-            onBasemapChange={setSelectedBasemap}
-          />
+          <ZoomControls />
         </MapContainer>
       </div>
       
+      {/* Basemap controls positioned outside MapContainer for stability */}
+      <BasemapControls 
+        selectedBasemap={selectedBasemap}
+        onBasemapChange={setSelectedBasemap}
+      />
     </div>
   );
 });
