@@ -353,11 +353,18 @@ function BasemapControls({
   onBasemapChange: (basemapId: string) => void; 
 }) {
   return (
-    <div className="absolute top-4 right-4 z-50">
-      <BasemapSelector 
-        selectedBasemap={selectedBasemap}
-        onBasemapChange={onBasemapChange}
-      />
+    <div 
+      className="absolute top-4 right-4 z-[9999] bg-red-500 p-2 rounded"
+      style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 9999 }}
+    >
+      {/* Temporary test button to verify positioning */}
+      <button 
+        onClick={() => onBasemapChange(selectedBasemap === 'dark' ? 'light' : 'dark')}
+        className="bg-blue-600 text-white px-3 py-2 rounded text-sm font-bold"
+        style={{ minWidth: '80px' }}
+      >
+        Test: {selectedBasemap}
+      </button>
     </div>
   );
 }
