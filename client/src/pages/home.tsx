@@ -415,9 +415,9 @@ export default function Home() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="overflow-visible">
                     {!isMapExpanded && (
-                      <div className="w-full" style={{ height: '320px' }}>
+                      <div className="w-full overflow-visible" style={{ height: '320px' }}>
                         <PropertyMap 
                           key="accumulated-map"
                           properties={isSelectionMode ? mapPropertyData : filteredMapData} 
