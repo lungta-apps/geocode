@@ -318,14 +318,23 @@ function BasemapSelector({
   );
 }
 
-function ZoomControls() {
-  const map = useMap();
+function ZoomControls({ mapRef }: { mapRef: React.RefObject<L.Map | null> }) {
+  const handleZoomIn = () => {
+    mapRef.current?.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    mapRef.current?.zoomOut();
+  };
 
   return (
-    <div className="absolute top-14 right-4 flex flex-col space-y-2 z-50">
+    <div 
+      className="absolute top-[72px] right-4 flex flex-col space-y-2 z-[9999]"
+      style={{ position: 'absolute', top: '72px', right: '16px', zIndex: 9999 }}
+    >
       <Button
-        onClick={() => map.zoomIn()}
-        className="bg-surface hover:bg-surface-variant text-on-surface p-2 rounded-lg shadow-lg border border-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
+        onClick={handleZoomIn}
+        className="bg-surface hover:bg-surface-variant text-on-surface p-2 rounded-lg shadow-lg border border-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary w-10 h-10"
         aria-label="Zoom in"
         data-testid="button-zoom-in"
         size="sm"
@@ -333,8 +342,8 @@ function ZoomControls() {
         <Plus className="h-4 w-4" />
       </Button>
       <Button
-        onClick={() => map.zoomOut()}
-        className="bg-surface hover:bg-surface-variant text-on-surface p-2 rounded-lg shadow-lg border border-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
+        onClick={handleZoomOut}
+        className="bg-surface hover:bg-surface-variant text-on-surface p-2 rounded-lg shadow-lg border border-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary w-10 h-10"
         aria-label="Zoom out"
         data-testid="button-zoom-out"
         size="sm"
@@ -599,7 +608,6 @@ export const PropertyMap = memo(function PropertyMap({
         })}
         
           <MapController properties={propertiesWithColors} />
-          <ZoomControls />
         </MapContainer>
       </div>
       
@@ -608,6 +616,9 @@ export const PropertyMap = memo(function PropertyMap({
         selectedBasemap={selectedBasemap}
         onBasemapChange={setSelectedBasemap}
       />
+      
+      {/* Zoom controls positioned outside MapContainer for visibility */}
+      <ZoomControls mapRef={mapRef} />
     </div>
   );
 });
