@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
@@ -405,105 +404,11 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
           Property Geocode Lookup
         </CardTitle>
         <CardDescription className="text-on-surface-variant">
-          Look up Montana property information using individual geocodes or upload a CSV file for batch processing.
+          Look up Montana property information by entering geocodes or uploading a CSV file for batch processing.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="single" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="single" data-testid="tab-single">Single Lookup</TabsTrigger>
-            <TabsTrigger value="batch" data-testid="tab-batch">Batch Upload</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="single">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4" role="search">
-                <FormField
-                  control={form.control}
-                  name="geocode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium text-on-surface">
-                        Montana Property Geocode
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            {...field}
-                            placeholder="e.g., 03-1032-34-1-08-10-0000"
-                            className="w-full px-4 py-3 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-lg"
-                            onChange={(e) => {
-                              handleInputChange(e.target.value);
-                            }}
-                            maxLength={25}
-                            aria-describedby="geocode-help"
-                            data-testid="input-geocode"
-                            disabled={isLoading}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormDescription id="geocode-help" className="text-sm text-on-surface-variant">
-                        Format: Numbers and hyphens only (e.g., 03-1032-34-1-08-10-0000)
-                      </FormDescription>
-                      <FormMessage className="text-sm text-error" role="alert" aria-live="polite" />
-                    </FormItem>
-                  )}
-                />
-                
-                {/* Map Mode Toggle for Single Lookup */}
-                <div className="flex items-center space-x-3 p-3 bg-surface-variant rounded-lg border border-gray-600">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="map-mode-single"
-                      checked={mapMode === 'add'}
-                      onCheckedChange={(checked) => onMapModeChange(checked ? 'add' : 'replace')}
-                      data-testid="switch-map-mode-single"
-                    />
-                    <Label htmlFor="map-mode-single" className="text-sm font-medium text-on-surface cursor-pointer">
-                      {mapMode === 'add' ? 'Add to Map' : 'Replace Map'}
-                    </Label>
-                  </div>
-                  <p className="text-xs text-on-surface-variant">
-                    {mapMode === 'add' 
-                      ? 'New properties will be added to existing map results' 
-                      : 'New properties will replace all existing map results'
-                    }
-                  </p>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="flex-1 sm:flex-none bg-primary hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900 flex items-center justify-center space-x-2"
-                    data-testid="button-search"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Searching...</span>
-                      </>
-                    ) : (
-                      <span>Search Property</span>
-                    )}
-                  </Button>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleSingleLookupClear}
-                    disabled={isLoading || !form.getValues('geocode')}
-                    className="flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium transition-all duration-200"
-                    data-testid="button-clear-single"
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </TabsContent>
-          
-          <TabsContent value="batch" className="space-y-4">
+        <div className="space-y-4">
             <div className="space-y-6">
               {/* Map Mode Toggle for Batch Upload */}
               <div className="flex items-center space-x-3 p-3 bg-surface-variant rounded-lg border border-gray-600">
@@ -735,8 +640,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                 </div>
               )}
             </div>
-          </TabsContent>
-        </Tabs>
+        </div>
       </CardContent>
     </Card>
     
