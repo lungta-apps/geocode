@@ -283,7 +283,7 @@ function BasemapSelector({
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="bg-surface border-gray-600 text-on-surface min-w-48"
+        className="z-[10000] bg-surface border-gray-600 text-on-surface min-w-48"
         sideOffset={8}
       >
         <div className="px-2 py-1 text-xs text-gray-400 font-medium">
