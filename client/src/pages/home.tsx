@@ -242,7 +242,7 @@ export default function Home() {
   };
 
   const handlePropertySelect = (geocode: string) => {
-    setSelectedGeocode(geocode);
+    setSelectedGeocode(prev => prev === geocode ? null : geocode);
   };
   
   // Selection mode handlers
@@ -499,7 +499,7 @@ export default function Home() {
                                     <span className="font-mono">{result.geocode}</span>
                                     {result.success && result.data?.address && (
                                       <button
-                                        onClick={() => setSelectedGeocode(result.geocode)}
+                                        onClick={() => handlePropertySelect(result.geocode)}
                                         className="text-blue-400 hover:text-blue-300 hover:underline cursor-pointer truncate flex-1 text-left transition-colors duration-200"
                                         title="Click to highlight on map"
                                         data-testid={`address-link-${result.geocode}`}
@@ -693,7 +693,7 @@ export default function Home() {
                         .map((result, index) => (
                           <button
                             key={result.geocode}
-                            onClick={() => setSelectedGeocode(result.geocode)}
+                            onClick={() => handlePropertySelect(result.geocode)}
                             className={`p-2 rounded text-left transition-colors duration-200 text-sm ${
                               selectedGeocode === result.geocode
                                 ? 'bg-orange-800/30 border border-orange-500 text-orange-300'
