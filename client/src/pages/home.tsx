@@ -344,8 +344,8 @@ export default function Home() {
           <>
             {/* Accumulated Map - Always show when properties exist */}
             {mapPropertyData.length > 0 && (
-              <section className="mb-8 fade-in" aria-labelledby="map-section-heading">
-                <Card className="bg-surface border-gray-700 shadow-lg">
+              <section className="mb-8 fade-in overflow-visible" aria-labelledby="map-section-heading">
+                <Card className="bg-surface border-gray-700 shadow-lg overflow-visible">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
