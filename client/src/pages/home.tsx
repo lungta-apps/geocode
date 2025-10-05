@@ -507,19 +507,37 @@ export default function Home() {
                               {selectedPropertyGeocodes.length > 0 ? 'Selected Properties:' : 'Results Summary:'}
                             </h4>
                             <div className="max-h-40 overflow-y-auto space-y-1">
-                              {filteredBatchResults.results.map((result, index) => (
-                                <div key={index} className="flex items-center justify-between p-2 bg-surface-variant rounded text-xs">
-                                  <div className="flex items-center space-x-2 flex-1">
+                              {filteredBatchResults.results.map((result, index) => {
+                                const isSelected = selectedGeocode === result.geocode;
+                                return (
+                                <div 
+                                  key={index} 
+                                  onClick={() => result.success && handlePropertySelect(result.geocode)}
+                                  onKeyDown={(e) => {
+                                    if ((e.key === 'Enter' || e.key === ' ') && result.success) {
+                                      e.preventDefault();
+                                      handlePropertySelect(result.geocode);
+                                    }
+                                  }}
+                                  tabIndex={result.success ? 0 : -1}
+                                  role={result.success ? "button" : undefined}
+                                  aria-label={result.success && result.data?.address ? `Select property ${result.data.address}` : undefined}
+                                  className={`flex items-center justify-between p-2 rounded text-xs transition-all duration-200 ${
+                                    isSelected 
+                                      ? 'bg-orange-900/40 border-2 border-orange-500' 
+                                      : 'bg-surface-variant border-2 border-transparent'
+                                  } ${result.success ? 'cursor-pointer hover:bg-gray-700/50' : ''}`}
+                                >
+                                  <div className="flex items-center space-x-2 flex-1 pointer-events-none">
                                     <span className="font-mono">{result.geocode}</span>
                                     {result.success && result.data?.address && (
-                                      <button
-                                        onClick={() => handlePropertySelect(result.geocode)}
-                                        className="text-blue-400 hover:text-blue-300 hover:underline cursor-pointer truncate flex-1 text-left transition-colors duration-200"
-                                        title="Click to highlight on map"
+                                      <span
+                                        className="text-blue-400 truncate flex-1 text-left"
+                                        title={result.data.address}
                                         data-testid={`address-link-${result.geocode}`}
                                       >
                                         {result.data.address}
-                                      </button>
+                                      </span>
                                     )}
                                     {result.processedAt && (
                                       <span className="text-gray-500 text-xs">
@@ -527,15 +545,15 @@ export default function Home() {
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center space-x-2">
+                                  <div className="flex items-center space-x-2 pointer-events-auto">
                                     {result.success ? (
-                                      <div className="flex items-center space-x-1">
+                                      <div className="flex items-center space-x-1 pointer-events-none">
                                         <CheckCircle className="h-3 w-3 text-green-400" />
                                         <span className="text-green-400">Found</span>
                                       </div>
                                     ) : (
                                       <div className="flex items-center space-x-2">
-                                        <div className="flex items-center space-x-1">
+                                        <div className="flex items-center space-x-1 pointer-events-none">
                                           <XCircle className="h-3 w-3 text-red-400" />
                                           <span className="text-red-400" title={result.error}>
                                             {result.error && result.error.length > 20 
@@ -544,7 +562,10 @@ export default function Home() {
                                           </span>
                                         </div>
                                         <Button
-                                          onClick={() => handleRetryIndividual(result.geocode)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRetryIndividual(result.geocode);
+                                          }}
                                           variant="ghost"
                                           size="sm"
                                           disabled={retryingGeocodes.has(result.geocode)}
@@ -562,7 +583,8 @@ export default function Home() {
                                     )}
                                   </div>
                                 </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
 
