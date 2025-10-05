@@ -13,7 +13,7 @@ export const batchGeocodeSearchSchema = z.object({
     .regex(/^[0-9\-]+$/, "Geocode must contain only numbers and hyphens")
     .max(25, "Geocode must be less than 25 characters"))
     .min(1, "At least one geocode is required")
-    .max(25, "Maximum 25 geocodes allowed per batch")
+    .max(50, "Maximum 50 geocodes allowed per batch")
 });
 
 // Polygon geometry schema for parcel boundaries
