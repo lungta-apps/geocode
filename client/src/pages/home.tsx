@@ -478,7 +478,7 @@ export default function Home() {
                             <span>Batch Lookup Results</span>
                           </CardTitle>
                           <p className="text-on-surface-variant mt-1">
-                            {batchPropertyData.length} {batchPropertyData.length === 1 ? 'property' : 'properties'} found and displayed on the map
+                            {mapPropertyData.length} {mapPropertyData.length === 1 ? 'property' : 'properties'} found and displayed on the map
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -493,7 +493,7 @@ export default function Home() {
                             <Maximize2 className="h-4 w-4" />
                           </Button>
                           <Badge variant="secondary" className="bg-blue-800 text-blue-100">
-                            {batchPropertyData.length} Properties
+                            {mapPropertyData.length} Properties
                           </Badge>
                         </div>
                       </div>
