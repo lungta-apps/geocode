@@ -142,12 +142,26 @@ export default function Home() {
     searchMutation.mutate(geocode);
   };
   
-  const handleBatchResults = (batchResults: BatchApiResponse) => {
-    setBatchResults(batchResults); // Store batch results for display
+  const handleBatchResults = (newBatchResults: BatchApiResponse) => {
+    // Merge or replace batch results based on mapMode
+    setBatchResults(prev => {
+      if (mapMode === 'add' && prev && prev.success) {
+        // Merge new results with existing ones
+        return {
+          ...newBatchResults,
+          results: [...prev.results, ...newBatchResults.results],
+          totalRequested: prev.totalRequested + newBatchResults.totalRequested,
+          totalSuccessful: prev.totalSuccessful + newBatchResults.totalSuccessful,
+          totalFailed: prev.totalFailed + newBatchResults.totalFailed
+        };
+      }
+      // Replace mode or no previous results
+      return newBatchResults;
+    });
     
-    if (batchResults.success && batchResults.results.length > 0) {
+    if (newBatchResults.success && newBatchResults.results.length > 0) {
       // Extract successful property data from batch results
-      const successfulProperties = batchResults.results
+      const successfulProperties = newBatchResults.results
         .filter(result => result.success && result.data)
         .map(result => result.data!);
         
@@ -159,8 +173,8 @@ export default function Home() {
         setSelectedGeocode(null); // Clear selection when new batch loads
         
         // Add to master collection
-        const batchId = batchResults.batchId || `batch_${Date.now()}`;
-        const requestedGeocodes = batchResults.results.map(r => r.geocode);
+        const batchId = newBatchResults.batchId || `batch_${Date.now()}`;
+        const requestedGeocodes = newBatchResults.results.map(r => r.geocode);
         addToMasterCollection(successfulProperties, {
           type: 'batch',
           batchId,
@@ -168,9 +182,9 @@ export default function Home() {
           sourceGeocodes: requestedGeocodes
         });
         
-        const total = batchResults.totalRequested;
-        const successful = batchResults.totalSuccessful;
-        const failed = batchResults.totalFailed;
+        const total = newBatchResults.totalRequested;
+        const successful = newBatchResults.totalSuccessful;
+        const failed = newBatchResults.totalFailed;
         
         if (failed > 0) {
           showToast(`Batch completed: ${successful}/${total} properties found successfully`, "info");
@@ -185,7 +199,7 @@ export default function Home() {
     } else {
       setBatchPropertyData([]);
       setIsShowingBatch(false);
-      setErrorState(batchResults.error || 'Batch lookup failed');
+      setErrorState(newBatchResults.error || 'Batch lookup failed');
       setSelectedGeocode(null);
     }
   };
@@ -236,7 +250,7 @@ export default function Home() {
   const handleRetryAllFailed = () => {
     if (!batchResults) return;
     
-    const failedGeocodes = getFailedGeocodes(batchResults.results);
+    const failedGeocodes = getFailedGeocodes(batchResults);
     setRetryingGeocodes(new Set(failedGeocodes));
     retryMutation.mutate(failedGeocodes);
   };
@@ -576,7 +590,7 @@ export default function Home() {
                               Export Successful Only
                             </Button>
 
-                            {batchResults.totalFailed > 0 && (
+                            {filteredBatchResults.totalFailed > 0 && (
                               <Button
                                 onClick={handleRetryAllFailed}
                                 variant="secondary"
@@ -590,7 +604,7 @@ export default function Home() {
                                 ) : (
                                   <RotateCcw className="h-4 w-4 mr-2" />
                                 )}
-                                Retry All Failed ({batchResults.totalFailed})
+                                Retry All Failed ({filteredBatchResults.totalFailed})
                               </Button>
                             )}
                           </div>
