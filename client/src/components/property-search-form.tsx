@@ -385,6 +385,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
 
   const handleBatchUploadClear = () => {
     setBatchInput('');
+    setParsedGeocodes([]);
     setSelectedFile(null);
     setFileValidation(null);
     setBatchResults(null);

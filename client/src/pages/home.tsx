@@ -353,7 +353,7 @@ export default function Home() {
                 data-testid="button-clear-map"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Clear Map ({masterPropertyCollection.properties.length} {masterPropertyCollection.properties.length === 1 ? 'property' : 'properties'})
+                Clear Results ({masterPropertyCollection.properties.length} {masterPropertyCollection.properties.length === 1 ? 'property' : 'properties'})
               </Button>
             </div>
           )}
