@@ -84,6 +84,12 @@ export default function Home() {
       totalCount: 0,
       lastUpdated: new Date().toISOString()
     });
+    setPropertyData(null);
+    setBatchResults(null);
+    setIsShowingBatch(false);
+    setSelectedPropertyGeocodes([]);
+    setIsSelectionMode(false);
+    setErrorState(null);
   };
 
   // Derive map data from master collection
