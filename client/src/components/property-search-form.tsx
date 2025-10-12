@@ -341,7 +341,16 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(false);
+    
+    // Only deactivate if we're actually leaving the drop zone
+    // Check if the relatedTarget is outside the current target
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+      setDragActive(false);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
