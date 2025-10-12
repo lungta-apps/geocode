@@ -835,6 +835,9 @@ export default function Home() {
             <p className="text-sm text-on-surface-variant">
               Data provided by the Montana State Library Cadastral Mapping Service
             </p>
+            <p className="text-sm text-on-surface-variant">
+              Copyright © 2025 | Bobbi Johnson
+            </p>
           </div>
         </div>
       </footer>
