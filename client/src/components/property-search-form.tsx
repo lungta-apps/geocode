@@ -442,7 +442,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                       value={batchInput}
                       onChange={(e) => handleTextInputChange(e.target.value)}
                       placeholder="Paste geocodes here, one per line."
-                      className="w-full min-h-24 px-3 py-2 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm resize-y"
+                      className="w-full min-h-32 px-3 py-2 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm resize-y"
                       data-testid="textarea-batch-input"
                     />
                     {parsedGeocodes.length > 0 && (
