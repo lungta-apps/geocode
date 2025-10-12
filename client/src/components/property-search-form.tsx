@@ -484,8 +484,11 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                       </div>
                     )}
                     
-                    <p className="text-xs text-on-surface-variant">Enter geocodes one per line. 50 geocodes max.
-                    Format: 03-1032-34-1-08-10-0000</p>
+                    <p className="text-xs text-on-surface-variant">
+                      Enter geocodes one per line. 50 geocodes max.
+                      <br />
+                      Format: 03-1032-34-1-08-10-0000
+                    </p>
                   </div>
                   
                   {/* File Upload Section */}
