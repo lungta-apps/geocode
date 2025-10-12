@@ -316,16 +316,6 @@ export default function Home() {
                 Montana Property Lookup
               </h1>
             </div>
-            <nav role="navigation" aria-label="Main navigation">
-              <Button 
-                variant="ghost"
-                className="text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-3 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
-                aria-label="Help and information"
-                data-testid="button-help"
-              >
-                Help
-              </Button>
-            </nav>
           </div>
         </div>
       </header>
