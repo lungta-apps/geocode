@@ -488,13 +488,13 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                     <p className="text-xs text-on-surface-variant">
                       Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
                     </p>
-                    <div className="flex gap-3 justify-center">
+                    <div className="flex gap-3 justify-center mt-1">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handleBatchUploadClear}
                         disabled={batchMutation.isPending || (parsedGeocodes.length === 0 && !selectedFile && !batchResults)}
-                        className="px-6 py-2.5 text-base"
+                        className="px-6 py-2.5 text-base font-medium"
                         data-testid="button-clear-batch"
                       >
                         Clear
@@ -502,7 +502,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                       <Button
                         onClick={handleTextBatchSubmit}
                         disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
-                        className="bg-primary hover:bg-blue-700 disabled:bg-gray-600 px-6 py-2.5 text-base"
+                        className="bg-primary hover:bg-blue-700 disabled:bg-gray-600 px-6 py-2.5 text-base font-medium"
                         data-testid="button-batch-submit"
                       >
                         {batchMutation.isPending ? (
