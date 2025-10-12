@@ -839,13 +839,6 @@ export default function Home() {
               <Button 
                 variant="ghost"
                 className="text-on-surface-variant hover:text-on-surface transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
-                data-testid="button-terms"
-              >
-                Terms
-              </Button>
-              <Button 
-                variant="ghost"
-                className="text-on-surface-variant hover:text-on-surface transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
                 data-testid="button-contact"
               >
                 Contact
