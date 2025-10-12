@@ -835,15 +835,6 @@ export default function Home() {
             <p className="text-sm text-on-surface-variant">
               Data provided by the Montana State Library Cadastral Mapping Service
             </p>
-            <div className="flex space-x-6 text-sm">
-              <Button 
-                variant="ghost"
-                className="text-on-surface-variant hover:text-on-surface transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
-                data-testid="button-contact"
-              >
-                Contact
-              </Button>
-            </div>
           </div>
         </div>
       </footer>
