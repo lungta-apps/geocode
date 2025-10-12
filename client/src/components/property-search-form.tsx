@@ -399,260 +399,258 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
 
   return (
     <>
-    <Card className="bg-surface border-gray-700 shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl font-semibold text-on-surface">
-          Property Geocode Lookup
-        </CardTitle>
-        <CardDescription className="text-on-surface-variant">
-          Look up Montana property information by entering geocodes or uploading a CSV file for batch processing.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-            <div className="space-y-6">
-              {/* Map Mode Toggle for Batch Upload */}
-              <div className="flex items-center space-x-3 p-3 bg-surface-variant rounded-lg border border-gray-600">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="map-mode-batch"
-                    checked={mapMode === 'add'}
-                    onCheckedChange={(checked) => onMapModeChange(checked ? 'add' : 'replace')}
-                    data-testid="switch-map-mode-batch"
-                  />
-                  <Label htmlFor="map-mode-batch" className="text-sm font-medium text-on-surface cursor-pointer">
-                    {mapMode === 'add' ? 'Add to Map' : 'Replace Map'}
-                  </Label>
-                </div>
-                <p className="text-xs text-on-surface-variant">
-                  {mapMode === 'add' 
-                    ? 'New properties will be added to existing map results' 
-                    : 'New properties will replace all existing map results'
-                  }
-                </p>
-              </div>
-              
-              {/* Two-column layout for batch input methods */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Textarea Input Section */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium text-on-surface">Copy & Paste Geocodes</Label>
-                  <div className="relative">
-                    <Textarea
-                      value={batchInput}
-                      onChange={(e) => handleTextInputChange(e.target.value)}
-                      placeholder="Paste geocodes here, one per line."
-                      className="w-full min-h-32 px-3 py-2 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm resize-y"
-                      data-testid="textarea-batch-input"
+      <Card className="bg-surface border-gray-700 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-semibold text-on-surface">
+            Property Geocode Lookup
+          </CardTitle>
+          <CardDescription className="text-on-surface-variant">
+            Look up Montana property information by entering geocodes or uploading a CSV file for batch processing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Map Mode Toggle for Batch Upload */}
+                <div className="flex items-center space-x-3 p-3 bg-surface-variant rounded-lg border border-gray-600">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="map-mode-batch"
+                      checked={mapMode === 'add'}
+                      onCheckedChange={(checked) => onMapModeChange(checked ? 'add' : 'replace')}
+                      data-testid="switch-map-mode-batch"
                     />
-                    {parsedGeocodes.length > 0 && (
-                      <div className="absolute top-2 right-2 flex items-center space-x-2">
-                        <Badge variant="secondary" className="bg-blue-800 text-blue-100">
-                          {parsedGeocodes.length} found
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handlePreviewToggle}
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
-                          data-testid="button-preview-toggle"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
+                    <Label htmlFor="map-mode-batch" className="text-sm font-medium text-on-surface cursor-pointer">
+                      {mapMode === 'add' ? 'Add to Map' : 'Replace Map'}
+                    </Label>
                   </div>
-                  
-                  {showPreview && parsedGeocodes.length > 0 && (
-                    <div className="p-3 bg-surface-variant rounded-lg border border-gray-600" data-testid="geocode-preview">
-                      <h4 className="text-sm font-medium text-on-surface mb-2 flex items-center">
-                        <List className="h-4 w-4 mr-2" />
-                        Detected Geocodes ({parsedGeocodes.length})
-                      </h4>
-                      <div className="max-h-32 overflow-y-auto space-y-1">
-                        {parsedGeocodes.map((geocode, index) => (
-                          <div key={index} className="text-xs font-mono bg-surface p-1 rounded border border-gray-700">
-                            {geocode}
-                          </div>
-                        ))}
-                      </div>
-                      {parsedGeocodes.length > 50 && (
-                        <p className="text-xs text-orange-400 mt-2">
-                          ⚠️ Maximum 50 geocodes allowed - please remove {parsedGeocodes.length - 50} extra geocodes
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  
                   <p className="text-xs text-on-surface-variant">
-                    Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
+                    {mapMode === 'add' 
+                      ? 'New properties will be added to existing map results' 
+                      : 'New properties will replace all existing map results'
+                    }
                   </p>
                 </div>
                 
-                {/* File Upload Section */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium text-on-surface">Upload CSV or Excel File</Label>
-                  <div className="mt-2">
-                    <div className="flex items-center justify-center w-full">
-                      <label
-                        htmlFor="csv-upload"
-                        className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                          dragActive
-                            ? 'border-primary bg-primary/10'
-                            : 'border-gray-600 bg-surface-variant hover:bg-gray-700'
-                        }`}
-                        data-testid="label-file-upload"
-                        onDragEnter={handleDragEnter}
-                        onDragLeave={handleDragLeave}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                      >
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className={`w-8 h-8 mb-2 ${dragActive ? 'text-primary' : 'text-gray-400'}`} />
-                          <p className="mb-2 text-sm text-gray-400">
-                            <span className="font-semibold">Click to upload</span> or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500">CSV or Excel files (.csv, .xlsx, .xls) - max 5MB</p>
+                {/* Two-column layout for batch input methods */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Textarea Input Section */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-on-surface">Copy & Paste Geocodes</Label>
+                    <div className="relative">
+                      <Textarea
+                        value={batchInput}
+                        onChange={(e) => handleTextInputChange(e.target.value)}
+                        placeholder="Paste geocodes here, one per line."
+                        className="w-full min-h-32 px-3 py-2 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm resize-y"
+                        data-testid="textarea-batch-input"
+                      />
+                      {parsedGeocodes.length > 0 && (
+                        <div className="absolute top-2 right-2 flex items-center space-x-2">
+                          <Badge variant="secondary" className="bg-blue-800 text-blue-100">
+                            {parsedGeocodes.length} found
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handlePreviewToggle}
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
+                            data-testid="button-preview-toggle"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
                         </div>
-                        <input
-                          id="csv-upload"
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                          onChange={handleFileChange}
-                          className="hidden"
-                          data-testid="input-file-upload"
-                        />
-                      </label>
+                      )}
                     </div>
-                    <p className="mt-2 text-xs text-on-surface-variant">
-                      Upload a CSV or Excel file with geocodes. The file should contain one geocode per row, or you can include column headers. Excel files must have only one worksheet.
-                    </p>
+                    
+                    {showPreview && parsedGeocodes.length > 0 && (
+                      <div className="p-3 bg-surface-variant rounded-lg border border-gray-600" data-testid="geocode-preview">
+                        <h4 className="text-sm font-medium text-on-surface mb-2 flex items-center">
+                          <List className="h-4 w-4 mr-2" />
+                          Detected Geocodes ({parsedGeocodes.length})
+                        </h4>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {parsedGeocodes.map((geocode, index) => (
+                            <div key={index} className="text-xs font-mono bg-surface p-1 rounded border border-gray-700">
+                              {geocode}
+                            </div>
+                          ))}
+                        </div>
+                        {parsedGeocodes.length > 50 && (
+                          <p className="text-xs text-orange-400 mt-2">
+                            ⚠️ Maximum 50 geocodes allowed - please remove {parsedGeocodes.length - 50} extra geocodes
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-on-surface-variant">Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
+                    50 geocodes max.</p>
                   </div>
-                </div>
-              </div>
-
-              {/* Centered Buttons Below Both Sections */}
-              <div className="flex gap-3 justify-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleBatchUploadClear}
-                  disabled={batchMutation.isPending || (parsedGeocodes.length === 0 && !selectedFile && !batchResults)}
-                  className="px-6 py-2.5 text-base font-medium"
-                  data-testid="button-clear-batch"
-                >
-                  Clear
-                </Button>
-                <Button
-                  onClick={handleTextBatchSubmit}
-                  disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
-                  className="bg-primary hover:bg-blue-700 disabled:bg-gray-600 px-6 py-2.5 text-base font-medium"
-                  data-testid="button-batch-submit"
-                >
-                  {batchMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>Process {parsedGeocodes.length} Geocodes</>
-                  )}
-                </Button>
-              </div>
-
-              {selectedFile && (
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2 p-3 bg-surface-variant rounded-lg">
-                    <FileText className="h-5 w-5 text-blue-400" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-on-surface">{selectedFile.name}</p>
-                      <p className="text-xs text-on-surface-variant">
-                        {(selectedFile.size / 1024).toFixed(1)} KB
+                  
+                  {/* File Upload Section */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium text-on-surface">Upload CSV or Excel File</Label>
+                    <div className="mt-2">
+                      <div className="flex items-center justify-center w-full">
+                        <label
+                          htmlFor="csv-upload"
+                          className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                            dragActive
+                              ? 'border-primary bg-primary/10'
+                              : 'border-gray-600 bg-surface-variant hover:bg-gray-700'
+                          }`}
+                          data-testid="label-file-upload"
+                          onDragEnter={handleDragEnter}
+                          onDragLeave={handleDragLeave}
+                          onDragOver={handleDragOver}
+                          onDrop={handleDrop}
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className={`w-8 h-8 mb-2 ${dragActive ? 'text-primary' : 'text-gray-400'}`} />
+                            <p className="mb-2 text-sm text-gray-400">
+                              <span className="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500">CSV or Excel files (.csv, .xlsx, .xls) - max 5MB</p>
+                          </div>
+                          <input
+                            id="csv-upload"
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            data-testid="input-file-upload"
+                          />
+                        </label>
+                      </div>
+                      <p className="mt-2 text-xs text-on-surface-variant">
+                        Upload a CSV or Excel file with geocodes. The file should contain one geocode per row, or you can include column headers. Excel files must have only one worksheet.
                       </p>
                     </div>
-                    <Button
-                      onClick={handleFileUpload}
-                      disabled={batchMutation.isPending || !fileValidation?.isValid}
-                      className="bg-primary hover:bg-blue-700 disabled:bg-gray-600"
-                      data-testid="button-upload"
-                    >
-                      {batchMutation.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Process File
-                        </>
-                      )}
-                    </Button>
                   </div>
                 </div>
-              )}
 
-              {fileValidation && !fileValidation.isValid && (
-                <Alert className="border-red-600 bg-red-900/20">
-                  <XCircle className="h-4 w-4" />
-                  <AlertDescription className="text-red-400">
-                    {fileValidation.message}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {batchResults && (
-                <div className="space-y-3" data-testid="batch-results">
-                  <Alert className={batchResults.success ? "border-green-600 bg-green-900/20" : "border-red-600 bg-red-900/20"}>
-                    {batchResults.success ? (
-                      <CheckCircle className="h-4 w-4" />
+                {/* Centered Buttons Below Both Sections */}
+                <div className="flex gap-3 justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleBatchUploadClear}
+                    disabled={batchMutation.isPending || (parsedGeocodes.length === 0 && !selectedFile && !batchResults)}
+                    className="px-6 py-2.5 text-base font-medium"
+                    data-testid="button-clear-batch"
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    onClick={handleTextBatchSubmit}
+                    disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
+                    className="bg-primary hover:bg-blue-700 disabled:bg-gray-600 px-6 py-2.5 text-base font-medium"
+                    data-testid="button-batch-submit"
+                  >
+                    {batchMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Processing...
+                      </>
                     ) : (
-                      <XCircle className="h-4 w-4" />
+                      <>Process {parsedGeocodes.length} Geocodes</>
                     )}
-                    <AlertDescription className={batchResults.success ? "text-green-400" : "text-red-400"}>
-                      {batchResults.success ? (
-                        <div>
-                          <p className="font-medium">Batch processing completed!</p>
-                          <div className="flex gap-4 mt-2">
-                            <Badge variant="secondary" className="bg-green-800 text-green-100">
-                              {batchResults.totalSuccessful} Successful
-                            </Badge>
-                            {batchResults.totalFailed > 0 && (
-                              <Badge variant="secondary" className="bg-red-800 text-red-100">
-                                {batchResults.totalFailed} Failed
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <p>{batchResults.error || 'Batch processing failed'}</p>
-                      )}
+                  </Button>
+                </div>
+
+                {selectedFile && (
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2 p-3 bg-surface-variant rounded-lg">
+                      <FileText className="h-5 w-5 text-blue-400" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-on-surface">{selectedFile.name}</p>
+                        <p className="text-xs text-on-surface-variant">
+                          {(selectedFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleFileUpload}
+                        disabled={batchMutation.isPending || !fileValidation?.isValid}
+                        className="bg-primary hover:bg-blue-700 disabled:bg-gray-600"
+                        data-testid="button-upload"
+                      >
+                        {batchMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Process File
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {fileValidation && !fileValidation.isValid && (
+                  <Alert className="border-red-600 bg-red-900/20">
+                    <XCircle className="h-4 w-4" />
+                    <AlertDescription className="text-red-400">
+                      {fileValidation.message}
                     </AlertDescription>
                   </Alert>
+                )}
 
-                </div>
-              )}
-            </div>
-        </div>
-      </CardContent>
-    </Card>
-    
-    {/* Real-time Progress Tracker */}
-    {showProgressTracker && activeBatchId && (
-      <BatchProgress
-        batchId={activeBatchId!}
-        initialTotal={parsedGeocodes.length || (selectedFile ? 1 : 0)}
-        onCancel={() => {
-          setShowProgressTracker(false);
-          setActiveBatchId(null);
-        }}
-        onComplete={() => {
-          setShowProgressTracker(false);
-          setActiveBatchId(null);
-        }}
-      />
-    )}
+                {batchResults && (
+                  <div className="space-y-3" data-testid="batch-results">
+                    <Alert className={batchResults.success ? "border-green-600 bg-green-900/20" : "border-red-600 bg-red-900/20"}>
+                      {batchResults.success ? (
+                        <CheckCircle className="h-4 w-4" />
+                      ) : (
+                        <XCircle className="h-4 w-4" />
+                      )}
+                      <AlertDescription className={batchResults.success ? "text-green-400" : "text-red-400"}>
+                        {batchResults.success ? (
+                          <div>
+                            <p className="font-medium">Batch processing completed!</p>
+                            <div className="flex gap-4 mt-2">
+                              <Badge variant="secondary" className="bg-green-800 text-green-100">
+                                {batchResults.totalSuccessful} Successful
+                              </Badge>
+                              {batchResults.totalFailed > 0 && (
+                                <Badge variant="secondary" className="bg-red-800 text-red-100">
+                                  {batchResults.totalFailed} Failed
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p>{batchResults.error || 'Batch processing failed'}</p>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+
+                  </div>
+                )}
+              </div>
+          </div>
+        </CardContent>
+      </Card>
+      {/* Real-time Progress Tracker */}
+      {showProgressTracker && activeBatchId && (
+        <BatchProgress
+          batchId={activeBatchId!}
+          initialTotal={parsedGeocodes.length || (selectedFile ? 1 : 0)}
+          onCancel={() => {
+            setShowProgressTracker(false);
+            setActiveBatchId(null);
+          }}
+          onComplete={() => {
+            setShowProgressTracker(false);
+            setActiveBatchId(null);
+          }}
+        />
+      )}
     </>
   );
 }
