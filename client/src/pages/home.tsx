@@ -477,9 +477,16 @@ export default function Home() {
                             <span className="w-5 h-5 bg-green-500 rounded-full"></span>
                             <span>Batch Lookup Results</span>
                           </CardTitle>
-                          <p className="text-on-surface-variant mt-1">
-                            {mapPropertyData.length} {mapPropertyData.length === 1 ? 'property' : 'properties'} found and displayed on the map
-                          </p>
+                          <div className="text-on-surface-variant mt-1">
+                            <p>
+                              {mapPropertyData.length} {mapPropertyData.length === 1 ? 'property' : 'properties'} found and displayed on the map
+                            </p>
+                            {selectedPropertyGeocodes.length > 0 && (
+                              <p className="text-green-400">
+                                {selectedPropertyGeocodes.length} {selectedPropertyGeocodes.length === 1 ? 'property' : 'properties'} selected
+                              </p>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Button
