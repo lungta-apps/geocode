@@ -525,7 +525,7 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                         </label>
                       </div>
                       <p className="mt-2 text-xs text-on-surface-variant">
-                        Upload a CSV or Excel file with geocodes. The file should contain one geocode per row, or you can include column headers. Excel files must have only one worksheet.
+                        Upload a CSV or Excel file with geocodes. The file should contain one geocode per row, or you can include column headers - 50 geocodes max. Excel files must have only one worksheet.
                       </p>
                     </div>
                   </div>
