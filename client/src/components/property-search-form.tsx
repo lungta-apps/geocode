@@ -431,139 +431,132 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                 </p>
               </div>
               
-              {/* Textarea Input Section */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium text-on-surface">Copy & Paste Geocodes</Label>
-                <div className="relative">
-                  <Textarea
-                    value={batchInput}
-                    onChange={(e) => handleTextInputChange(e.target.value)}
-                    placeholder="Paste geocodes here, one per line."
-                    className="w-full min-h-24 px-3 py-2 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm resize-y"
-                    data-testid="textarea-batch-input"
-                  />
-                  {parsedGeocodes.length > 0 && (
-                    <div className="absolute top-2 right-2 flex items-center space-x-2">
-                      <Badge variant="secondary" className="bg-blue-800 text-blue-100">
-                        {parsedGeocodes.length} found
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={handlePreviewToggle}
-                        className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
-                        data-testid="button-preview-toggle"
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                
-                {showPreview && parsedGeocodes.length > 0 && (
-                  <div className="p-3 bg-surface-variant rounded-lg border border-gray-600" data-testid="geocode-preview">
-                    <h4 className="text-sm font-medium text-on-surface mb-2 flex items-center">
-                      <List className="h-4 w-4 mr-2" />
-                      Detected Geocodes ({parsedGeocodes.length})
-                    </h4>
-                    <div className="max-h-32 overflow-y-auto space-y-1">
-                      {parsedGeocodes.map((geocode, index) => (
-                        <div key={index} className="text-xs font-mono bg-surface p-1 rounded border border-gray-700">
-                          {geocode}
-                        </div>
-                      ))}
-                    </div>
-                    {parsedGeocodes.length > 50 && (
-                      <p className="text-xs text-orange-400 mt-2">
-                        ⚠️ Maximum 50 geocodes allowed - please remove {parsedGeocodes.length - 50} extra geocodes
-                      </p>
+              {/* Two-column layout for batch input methods */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Textarea Input Section */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-on-surface">Copy & Paste Geocodes</Label>
+                  <div className="relative">
+                    <Textarea
+                      value={batchInput}
+                      onChange={(e) => handleTextInputChange(e.target.value)}
+                      placeholder="Paste geocodes here, one per line."
+                      className="w-full min-h-24 px-3 py-2 text-on-surface bg-surface-variant border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent font-mono text-sm resize-y"
+                      data-testid="textarea-batch-input"
+                    />
+                    {parsedGeocodes.length > 0 && (
+                      <div className="absolute top-2 right-2 flex items-center space-x-2">
+                        <Badge variant="secondary" className="bg-blue-800 text-blue-100">
+                          {parsedGeocodes.length} found
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handlePreviewToggle}
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
+                          data-testid="button-preview-toggle"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      </div>
                     )}
                   </div>
-                )}
-                
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-on-surface-variant">
-                    Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleBatchUploadClear}
-                      disabled={batchMutation.isPending || (parsedGeocodes.length === 0 && !selectedFile && !batchResults)}
-                      className="px-4 py-2 text-sm"
-                      data-testid="button-clear-batch"
-                    >
-                      Clear
-                    </Button>
-                    <Button
-                      onClick={handleTextBatchSubmit}
-                      disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
-                      className="bg-primary hover:bg-blue-700 disabled:bg-gray-600"
-                      data-testid="button-batch-submit"
-                    >
-                      {batchMutation.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>Process {parsedGeocodes.length} Geocodes</>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-600" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-surface px-2 text-gray-400">Or</span>
-                </div>
-              </div>
-              
-              {/* File Upload Section */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium text-on-surface">Upload CSV or Excel File</Label>
-                <div className="mt-2">
-                  <div className="flex items-center justify-center w-full">
-                    <label
-                      htmlFor="csv-upload"
-                      className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-                        dragActive
-                          ? 'border-primary bg-primary/10'
-                          : 'border-gray-600 bg-surface-variant hover:bg-gray-700'
-                      }`}
-                      data-testid="label-file-upload"
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDragOver={handleDragOver}
-                      onDrop={handleDrop}
-                    >
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className={`w-8 h-8 mb-2 ${dragActive ? 'text-primary' : 'text-gray-400'}`} />
-                        <p className="mb-2 text-sm text-gray-400">
-                          <span className="font-semibold">Click to upload</span> or drag and drop
-                        </p>
-                        <p className="text-xs text-gray-500">CSV or Excel files (.csv, .xlsx, .xls) - max 5MB</p>
+                  
+                  {showPreview && parsedGeocodes.length > 0 && (
+                    <div className="p-3 bg-surface-variant rounded-lg border border-gray-600" data-testid="geocode-preview">
+                      <h4 className="text-sm font-medium text-on-surface mb-2 flex items-center">
+                        <List className="h-4 w-4 mr-2" />
+                        Detected Geocodes ({parsedGeocodes.length})
+                      </h4>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {parsedGeocodes.map((geocode, index) => (
+                          <div key={index} className="text-xs font-mono bg-surface p-1 rounded border border-gray-700">
+                            {geocode}
+                          </div>
+                        ))}
                       </div>
-                      <input
-                        id="csv-upload"
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        data-testid="input-file-upload"
-                      />
-                    </label>
+                      {parsedGeocodes.length > 50 && (
+                        <p className="text-xs text-orange-400 mt-2">
+                          ⚠️ Maximum 50 geocodes allowed - please remove {parsedGeocodes.length - 50} extra geocodes
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <p className="text-xs text-on-surface-variant">
+                      Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleBatchUploadClear}
+                        disabled={batchMutation.isPending || (parsedGeocodes.length === 0 && !selectedFile && !batchResults)}
+                        className="px-4 py-2 text-sm"
+                        data-testid="button-clear-batch"
+                      >
+                        Clear
+                      </Button>
+                      <Button
+                        onClick={handleTextBatchSubmit}
+                        disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
+                        className="bg-primary hover:bg-blue-700 disabled:bg-gray-600"
+                        data-testid="button-batch-submit"
+                      >
+                        {batchMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>Process {parsedGeocodes.length} Geocodes</>
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs text-on-surface-variant">
-                    Upload a CSV or Excel file with geocodes. The file should contain one geocode per row, or you can include column headers. Excel files must have only one worksheet.
-                  </p>
+                </div>
+                
+                {/* File Upload Section */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-on-surface">Upload CSV or Excel File</Label>
+                  <div className="mt-2">
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor="csv-upload"
+                        className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                          dragActive
+                            ? 'border-primary bg-primary/10'
+                            : 'border-gray-600 bg-surface-variant hover:bg-gray-700'
+                        }`}
+                        data-testid="label-file-upload"
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className={`w-8 h-8 mb-2 ${dragActive ? 'text-primary' : 'text-gray-400'}`} />
+                          <p className="mb-2 text-sm text-gray-400">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">CSV or Excel files (.csv, .xlsx, .xls) - max 5MB</p>
+                        </div>
+                        <input
+                          id="csv-upload"
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                          onChange={handleFileChange}
+                          className="hidden"
+                          data-testid="input-file-upload"
+                        />
+                      </label>
+                    </div>
+                    <p className="mt-2 text-xs text-on-surface-variant">
+                      Upload a CSV or Excel file with geocodes. The file should contain one geocode per row, or you can include column headers. Excel files must have only one worksheet.
+                    </p>
+                  </div>
                 </div>
               </div>
 
