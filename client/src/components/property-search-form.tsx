@@ -484,38 +484,9 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                     </div>
                   )}
                   
-                  <div className="space-y-2">
-                    <p className="text-xs text-on-surface-variant">
-                      Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
-                    </p>
-                    <div className="flex gap-3 justify-center mt-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleBatchUploadClear}
-                        disabled={batchMutation.isPending || (parsedGeocodes.length === 0 && !selectedFile && !batchResults)}
-                        className="px-6 py-2.5 text-base font-medium"
-                        data-testid="button-clear-batch"
-                      >
-                        Clear
-                      </Button>
-                      <Button
-                        onClick={handleTextBatchSubmit}
-                        disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
-                        className="bg-primary hover:bg-blue-700 disabled:bg-gray-600 px-6 py-2.5 text-base font-medium"
-                        data-testid="button-batch-submit"
-                      >
-                        {batchMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>Process {parsedGeocodes.length} Geocodes</>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+                  <p className="text-xs text-on-surface-variant">
+                    Enter geocodes one per line. Format: 03-1032-34-1-08-10-0000
+                  </p>
                 </div>
                 
                 {/* File Upload Section */}
@@ -559,6 +530,35 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Centered Buttons Below Both Sections */}
+              <div className="flex gap-3 justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBatchUploadClear}
+                  disabled={batchMutation.isPending || (parsedGeocodes.length === 0 && !selectedFile && !batchResults)}
+                  className="px-6 py-2.5 text-base font-medium"
+                  data-testid="button-clear-batch"
+                >
+                  Clear
+                </Button>
+                <Button
+                  onClick={handleTextBatchSubmit}
+                  disabled={parsedGeocodes.length === 0 || batchMutation.isPending}
+                  className="bg-primary hover:bg-blue-700 disabled:bg-gray-600 px-6 py-2.5 text-base font-medium"
+                  data-testid="button-batch-submit"
+                >
+                  {batchMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>Process {parsedGeocodes.length} Geocodes</>
+                  )}
+                </Button>
               </div>
 
               {selectedFile && (
