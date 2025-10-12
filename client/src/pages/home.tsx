@@ -719,12 +719,14 @@ export default function Home() {
               </div>
               
               {/* Results Summary in Modal */}
-              {batchResults && batchResults.success && batchResults.results.length > 0 && (
+              {filteredBatchResults && filteredBatchResults.success && filteredBatchResults.results.length > 0 && (
                 <div className="border-t border-gray-700 p-4 max-h-48 overflow-y-auto">
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-on-surface mb-2">Click addresses to highlight on map:</h4>
+                    <h4 className="text-sm font-medium text-on-surface mb-2">
+                      {selectedPropertyGeocodes.length > 0 ? 'Selected Properties - Click to highlight:' : 'Click addresses to highlight on map:'}
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {batchResults.results
+                      {filteredBatchResults.results
                         .filter(result => result.success && result.data?.address)
                         .map((result, index) => (
                           <button
