@@ -319,7 +319,6 @@ export default function Home() {
           </div>
         </div>
       </header>
-
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" role="main">
         {/* Search Section */}
@@ -797,7 +796,7 @@ export default function Home() {
         )}
 
         {/* Help Section */}
-        <section className="mt-12 bg-surface rounded-xl p-6 shadow-lg border border-gray-700" aria-labelledby="help-heading">
+        <section className="mt-12 rounded-xl p-6 shadow-lg border border-gray-700 bg-[#171717]" aria-labelledby="help-heading">
           <h3 id="help-heading" className="text-lg font-semibold text-on-surface mb-4">
             How to Use This Tool
           </h3>
@@ -817,7 +816,6 @@ export default function Home() {
           </div>
         </section>
       </main>
-
       {/* Footer */}
       <footer className="bg-surface border-t border-gray-700 mt-12" role="contentinfo">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -831,7 +829,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
       {/* Toast Notifications */}
       {toast.show && (
         <div className="fixed top-4 right-4 z-50" aria-live="polite">
