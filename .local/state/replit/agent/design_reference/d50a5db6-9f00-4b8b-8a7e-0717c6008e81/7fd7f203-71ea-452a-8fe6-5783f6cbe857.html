@@ -1,0 +1,631 @@
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Montana Property Geocode Lookup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    primary: '#1976D2',
+                    secondary: '#424242',
+                    surface: '#1E1E1E',
+                    'surface-variant': '#2D2D2D',
+                    'on-surface': '#FFFFFF',
+                    'on-surface-variant': '#B3B3B3',
+                    error: '#F44336',
+                    success: '#4CAF50'
+                },
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', 'sans-serif'],
+                }
+            }
+        }
+    };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        .loading-spinner {
+            border: 2px solid #424242;
+            border-top: 2px solid #1976D2;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .leaflet-container {
+            background-color: #1E1E1E;
+        }
+        
+        .custom-input:focus-within {
+            box-shadow: 0 0 0 2px #1976D2;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-on-surface font-sans min-h-screen">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-surface border-b border-gray-700" role="banner">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">MT</span>
+                    </div>
+                    <h1 class="text-xl font-semibold text-on-surface">
+                        Montana Property Lookup
+                    </h1>
+                </div>
+                <nav role="navigation" aria-label="Main navigation">
+                    <button 
+                        id="helpBtn"
+                        class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 px-3 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
+                        aria-label="Help and information">
+                        Help
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <!-- @COMPONENT: Main Content -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" role="main">
+        <!-- @COMPONENT: Search Section -->
+        <section class="mb-8" aria-labelledby="search-heading">
+            <div class="bg-surface rounded-xl p-6 shadow-lg border border-gray-700">
+                <h2 id="search-heading" class="text-2xl font-semibold text-on-surface mb-2">
+                    Property Geocode Lookup
+                </h2>
+                <p class="text-on-surface-variant mb-6">
+                    Enter a Montana property geocode to retrieve address information and location details.
+                </p>
+                
+                <form id="geocodeForm" class="space-y-4" role="search">
+                    <div class="relative">
+                        <label for="geocodeInput" class="block text-sm font-medium text-on-surface mb-2">
+                            Montana Property Geocode
+                        </label>
+                        <div class="relative custom-input rounded-lg border border-gray-600 bg-surface-variant">
+                            <input 
+                                type="text" 
+                                id="geocodeInput"
+                                name="geocode"
+                                placeholder="e.g., 12345-67890-12345"
+                                pattern="[0-9\-]+"
+                                class="w-full px-4 py-3 text-on-surface bg-transparent border-none outline-none placeholder-on-surface-variant font-mono text-lg"
+                                data-mock="true"
+                                data-bind="geocodeInput.value"
+                                aria-describedby="geocode-help geocode-error"
+                                aria-required="true"
+                                maxlength="20"
+                            />
+                        </div>
+                        <p id="geocode-help" class="mt-2 text-sm text-on-surface-variant">
+                            Format: Numbers and hyphens only (e.g., 12345-67890-12345)
+                        </p>
+                        <div id="geocode-error" class="mt-2 text-sm text-error hidden" role="alert" aria-live="polite">
+                            <!-- Error messages will be inserted here -->
+                        </div>
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        id="searchBtn"
+                        class="w-full sm:w-auto bg-primary hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900 flex items-center justify-center space-x-2"
+                        data-event="click:handleSearch"
+                        data-implementation="Should validate geocode format and fetch property data">
+                        <span id="searchBtnText">Search Property</span>
+                        <div id="searchBtnLoader" class="loading-spinner hidden"></div>
+                    </button>
+                </form>
+            </div>
+        </section>
+        <!-- @END_COMPONENT: Search Section -->
+
+        <!-- @COMPONENT: Results Section -->
+        <section id="resultsSection" class="hidden fade-in" aria-labelledby="results-heading">
+            <div class="grid lg:grid-cols-2 gap-8">
+                <!-- Property Information Card -->
+                <article class="bg-surface rounded-xl p-6 shadow-lg border border-gray-700">
+                    <h3 id="results-heading" class="text-xl font-semibold text-on-surface mb-4 flex items-center space-x-2">
+                        <span class="w-5 h-5 bg-success rounded-full"></span>
+                        <span>Property Information</span>
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-primary pl-4">
+                            <h4 class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Physical Address</h4>
+                            <p class="text-lg text-on-surface mt-1" data-bind="property.address" data-mock="true">
+                                1234 Mountain View Drive, Helena, MT 59601
+                            </p>
+                        </div>
+                        
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Geocode</h4>
+                                <p class="text-lg text-on-surface mt-1 font-mono" data-bind="property.geocode" data-mock="true">
+                                    12345-67890-12345
+                                </p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">County</h4>
+                                <p class="text-lg text-on-surface mt-1" data-bind="property.county" data-mock="true">
+                                    Lewis and Clark
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Coordinates</h4>
+                                <p class="text-sm text-on-surface-variant mt-1 font-mono" data-bind="property.coordinates" data-mock="true">
+                                    46.5967°N, 112.0362°W
+                                </p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-on-surface-variant uppercase tracking-wide">Legal Description</h4>
+                                <p class="text-sm text-on-surface-variant mt-1" data-bind="property.legalDescription" data-mock="true">
+                                    Lot 15, Block 3, Mountain Vista Subdivision
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 pt-4 border-t border-gray-700 flex flex-wrap gap-3">
+                        <button 
+                            class="bg-surface-variant hover:bg-gray-600 text-on-surface px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
+                            data-event="click:copyAddress"
+                            data-implementation="Copy address to clipboard">
+                            Copy Address
+                        </button>
+                        <button 
+                            class="bg-surface-variant hover:bg-gray-600 text-on-surface px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
+                            data-event="click:openInMaps"
+                            data-implementation="Open location in external maps application">
+                            Open in Maps
+                        </button>
+                    </div>
+                </article>
+
+                <!-- Map Section -->
+                <article class="bg-surface rounded-xl p-6 shadow-lg border border-gray-700">
+                    <h3 class="text-xl font-semibold text-on-surface mb-4 flex items-center space-x-2">
+                        <span class="w-5 h-5 bg-primary rounded-full"></span>
+                        <span>Property Location</span>
+                    </h3>
+                    
+                    <div class="relative">
+                        <div 
+                            id="map" 
+                            class="w-full h-80 rounded-lg border border-gray-600"
+                            role="img"
+                            aria-label="Interactive map showing property location"
+                            data-implementation="Implement Leaflet map with property marker">
+                        </div>
+                        
+                        <!-- Map Controls -->
+                        <div class="absolute top-4 right-4 flex flex-col space-y-2">
+                            <button 
+                                id="zoomInBtn"
+                                class="bg-surface hover:bg-surface-variant text-on-surface p-2 rounded-lg shadow-lg border border-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                                aria-label="Zoom in"
+                                data-event="click:zoomIn">
+                                +
+                            </button>
+                            <button 
+                                id="zoomOutBtn"
+                                class="bg-surface hover:bg-surface-variant text-on-surface p-2 rounded-lg shadow-lg border border-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary"
+                                aria-label="Zoom out"
+                                data-event="click:zoomOut">
+                                −
+                            </button>
+                        </div>
+                        
+                        <!-- Map Legend -->
+                        <div class="mt-4 flex items-center space-x-4 text-sm text-on-surface-variant">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-error rounded-full"></div>
+                                <span>Property Location</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-3 h-3 bg-primary rounded-full"></div>
+                                <span>Your Search</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+        <!-- @END_COMPONENT: Results Section -->
+
+        <!-- @COMPONENT: Error State -->
+        <section id="errorSection" class="hidden fade-in" role="alert" aria-labelledby="error-heading">
+            <div class="bg-red-900/20 border border-red-700 rounded-xl p-6">
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 bg-error rounded-full flex-shrink-0 flex items-center justify-center mt-0.5">
+                        <span class="text-white text-sm font-bold">!</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 id="error-heading" class="text-lg font-semibold text-red-300 mb-2">
+                            Property Not Found
+                        </h3>
+                        <p class="text-red-200 mb-4" id="errorMessage" data-mock="true">
+                            The geocode "12345-67890-99999" could not be found in the Montana cadastral database. Please verify the geocode and try again.
+                        </p>
+                        <div class="flex flex-wrap gap-3">
+                            <button 
+                                id="tryAgainBtn"
+                                class="bg-error hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-error focus:ring-offset-2 focus:ring-offset-gray-900"
+                                data-event="click:resetSearch"
+                                data-implementation="Clear form and allow new search">
+                                Try Again
+                            </button>
+                            <button 
+                                class="bg-red-900/40 hover:bg-red-800/40 text-red-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                data-event="click:showHelp"
+                                data-implementation="Show help modal with geocode format examples">
+                                Get Help
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- @END_COMPONENT: Error State -->
+
+        <!-- @COMPONENT: Help Section -->
+        <section class="mt-12 bg-surface rounded-xl p-6 shadow-lg border border-gray-700" aria-labelledby="help-heading">
+            <h3 id="help-heading" class="text-lg font-semibold text-on-surface mb-4">
+                How to Use This Tool
+            </h3>
+            <div class="space-y-4 text-on-surface-variant">
+                <div class="flex items-start space-x-3">
+                    <span class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5">1</span>
+                    <p>Enter a valid Montana property geocode in the search field above. Geocodes typically contain numbers and hyphens.</p>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5">2</span>
+                    <p>Click "Search Property" to retrieve the physical address and location information from the Montana cadastral database.</p>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <span class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5">3</span>
+                    <p>View the property details and explore the interactive map to see the exact location of the property.</p>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-4 border-t border-gray-700">
+                <h4 class="text-sm font-semibold text-on-surface mb-2">Need Help Finding a Geocode?</h4>
+                <p class="text-sm text-on-surface-variant">
+                    Montana property geocodes can typically be found on property tax statements, deed documents, or by contacting your local county assessor's office.
+                </p>
+            </div>
+        </section>
+        <!-- @END_COMPONENT: Help Section -->
+    </main>
+    <!-- @END_COMPONENT: Main Content -->
+
+    <!-- @COMPONENT: Footer -->
+    <footer class="bg-surface border-t border-gray-700 mt-12" role="contentinfo">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                <p class="text-sm text-on-surface-variant">
+                    Data provided by the Montana State Library Cadastral Mapping Service
+                </p>
+                <div class="flex space-x-6 text-sm">
+                    <button 
+                        class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
+                        data-event="click:showPrivacy"
+                        data-implementation="Show privacy policy modal">
+                        Privacy
+                    </button>
+                    <button 
+                        class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
+                        data-event="click:showTerms"
+                        data-implementation="Show terms of service modal">
+                        Terms
+                    </button>
+                    <button 
+                        class="text-on-surface-variant hover:text-on-surface transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-gray-900"
+                        data-event="click:showContact"
+                        data-implementation="Show contact information modal">
+                        Contact
+                    </button>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- @END_COMPONENT: Footer -->
+
+    <!-- @COMPONENT: Toast Notifications -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2" aria-live="polite">
+        <!-- Toasts will be dynamically inserted here -->
+    </div>
+    <!-- @END_COMPONENT: Toast Notifications -->
+
+    <script>
+        (function() {
+            // @STATE: isLoading:boolean = false
+            // @STATE: searchResults:object = null
+            // @STATE: errorState:object = null
+            // @STATE: map:object = null
+
+            let map = null;
+            let currentMarker = null;
+
+            // Initialize the application
+            function init() {
+                setupEventListeners();
+                initializeMap();
+                
+                // TODO: Implement API integration with Montana cadastral service
+                // TODO: Add web scraping functionality for address extraction
+                // TODO: Implement proper error handling and validation
+            }
+
+            function setupEventListeners() {
+                const form = document.getElementById('geocodeForm');
+                const searchBtn = document.getElementById('searchBtn');
+                const geocodeInput = document.getElementById('geocodeInput');
+
+                form?.addEventListener('submit', handleFormSubmit);
+                
+                // Input validation and formatting
+                geocodeInput?.addEventListener('input', function(e) {
+                    const value = e.target.value.replace(/[^0-9\-]/g, '');
+                    e.target.value = value;
+                    
+                    // Clear previous errors
+                    hideError();
+                });
+
+                // Keyboard navigation support
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        hideAllModals();
+                    }
+                });
+            }
+
+            function handleFormSubmit(e) {
+                e.preventDefault();
+                
+                const geocodeInput = document.getElementById('geocodeInput');
+                const geocode = geocodeInput?.value.trim();
+                
+                if (!geocode) {
+                    showError('Please enter a geocode.');
+                    return;
+                }
+                
+                if (!isValidGeocode(geocode)) {
+                    showError('Please enter a valid geocode format (numbers and hyphens only).');
+                    return;
+                }
+                
+                searchProperty(geocode);
+            }
+
+            function isValidGeocode(geocode) {
+                // Basic validation - adjust pattern as needed for Montana geocodes
+                return /^[0-9\-]+$/.test(geocode) && geocode.length >= 5;
+            }
+
+            function searchProperty(geocode) {
+                setLoadingState(true);
+                hideError();
+                hideResults();
+                
+                // TODO: Implement actual API call to Montana cadastral service
+                // Simulating API call with setTimeout
+                setTimeout(() => {
+                    // Mock successful response
+                    if (geocode === '12345-67890-99999') {
+                        // Simulate error case
+                        showErrorState(`The geocode "${geocode}" could not be found in the Montana cadastral database.`);
+                    } else {
+                        // Simulate success case
+                        const mockProperty = {
+                            geocode: geocode,
+                            address: '1234 Mountain View Drive, Helena, MT 59601',
+                            county: 'Lewis and Clark',
+                            coordinates: '46.5967°N, 112.0362°W',
+                            legalDescription: 'Lot 15, Block 3, Mountain Vista Subdivision',
+                            lat: 46.5967,
+                            lng: -112.0362
+                        };
+                        showResults(mockProperty);
+                    }
+                    setLoadingState(false);
+                }, 1500);
+            }
+
+            function setLoadingState(loading) {
+                const searchBtn = document.getElementById('searchBtn');
+                const searchBtnText = document.getElementById('searchBtnText');
+                const searchBtnLoader = document.getElementById('searchBtnLoader');
+                
+                if (loading) {
+                    searchBtn?.setAttribute('disabled', 'true');
+                    searchBtnText && (searchBtnText.textContent = 'Searching...');
+                    searchBtnLoader?.classList.remove('hidden');
+                } else {
+                    searchBtn?.removeAttribute('disabled');
+                    searchBtnText && (searchBtnText.textContent = 'Search Property');
+                    searchBtnLoader?.classList.add('hidden');
+                }
+            }
+
+            function showResults(property) {
+                hideError();
+                
+                // Update property information
+                const elements = {
+                    '[data-bind="property.address"]': property.address,
+                    '[data-bind="property.geocode"]': property.geocode,
+                    '[data-bind="property.county"]': property.county,
+                    '[data-bind="property.coordinates"]': property.coordinates,
+                    '[data-bind="property.legalDescription"]': property.legalDescription
+                };
+                
+                Object.entries(elements).forEach(([selector, value]) => {
+                    const element = document.querySelector(selector);
+                    if (element) element.textContent = value;
+                });
+                
+                // Show results section
+                const resultsSection = document.getElementById('resultsSection');
+                resultsSection?.classList.remove('hidden');
+                
+                // Update map
+                updateMap(property.lat, property.lng, property.address);
+                
+                // Show success toast
+                showToast('Property information loaded successfully!', 'success');
+            }
+
+            function showErrorState(message) {
+                hideResults();
+                
+                const errorSection = document.getElementById('errorSection');
+                const errorMessage = document.getElementById('errorMessage');
+                
+                if (errorMessage) errorMessage.textContent = message;
+                errorSection?.classList.remove('hidden');
+            }
+
+            function hideResults() {
+                const resultsSection = document.getElementById('resultsSection');
+                resultsSection?.classList.add('hidden');
+            }
+
+            function hideError() {
+                const errorSection = document.getElementById('errorSection');
+                const geocodeError = document.getElementById('geocode-error');
+                
+                errorSection?.classList.add('hidden');
+                geocodeError?.classList.add('hidden');
+            }
+
+            function showError(message) {
+                const geocodeError = document.getElementById('geocode-error');
+                if (geocodeError) {
+                    geocodeError.textContent = message;
+                    geocodeError.classList.remove('hidden');
+                }
+            }
+
+            function initializeMap() {
+                // Initialize Leaflet map centered on Montana
+                map = L.map('map', {
+                    center: [47.0527, -109.6333], // Montana center
+                    zoom: 7,
+                    zoomControl: false // We'll use custom controls
+                });
+
+                // Add dark theme tile layer
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                    subdomains: 'abcd',
+                    maxZoom: 20
+                }).addTo(map);
+
+                // Custom zoom controls
+                document.getElementById('zoomInBtn')?.addEventListener('click', () => {
+                    map.zoomIn();
+                });
+                
+                document.getElementById('zoomOutBtn')?.addEventListener('click', () => {
+                    map.zoomOut();
+                });
+            }
+
+            function updateMap(lat, lng, address) {
+                if (!map) return;
+                
+                // Remove existing marker
+                if (currentMarker) {
+                    map.removeLayer(currentMarker);
+                }
+                
+                // Add new marker
+                currentMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'custom-marker',
+                        html: '<div style="background-color: #F44336; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white;"></div>',
+                        iconSize: [26, 26],
+                        iconAnchor: [13, 13]
+                    })
+                }).addTo(map);
+                
+                // Add popup
+                currentMarker.bindPopup(`
+                    <div style="color: #333; font-family: Inter, sans-serif;">
+                        <strong style="color: #1976D2;">Property Location</strong><br>
+                        ${address}
+                    </div>
+                `);
+                
+                // Center map on property
+                map.setView([lat, lng], 15);
+            }
+
+            function showToast(message, type = 'info') {
+                const container = document.getElementById('toastContainer');
+                if (!container) return;
+                
+                const toast = document.createElement('div');
+                const bgColor = type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600';
+                
+                toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 fade-in`;
+                toast.innerHTML = `
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.remove()" class="text-white hover:text-gray-200 focus:outline-none">
+                        <span aria-hidden="true">&times;</span>
+                        <span class="sr-only">Dismiss</span>
+                    </button>
+                `;
+                
+                container.appendChild(toast);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    toast.remove();
+                }, 5000);
+            }
+
+            function hideAllModals() {
+                // TODO: Implement modal hiding logic when modals are added
+            }
+
+            // Initialize when DOM is loaded
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+</body>
+</html>

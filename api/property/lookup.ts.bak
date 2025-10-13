@@ -1,0 +1,11 @@
+// api/property/lookup.ts
+export default async function handler(req: any, res: any) {
+  const geocode =
+    typeof req?.query?.geocode === "string" ? req.query.geocode : "";
+  res.status(200).json({
+    ok: true,
+    route: "lookup",
+    geocode,
+    time: new Date().toISOString(),
+  });
+}
