@@ -8,5 +8,6 @@
     "baseUrl": ".",
     "types": ["node"]
   },
-  "include": ["api", "shared", "client", "server", "vite.config.ts"]
+  "include": ["api/**/*.js", "shared", "client", "vite.config.ts"],
+  "exclude": ["server", "api/**/*.ts"]
 }
