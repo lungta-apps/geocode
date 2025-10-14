@@ -1,0 +1,4 @@
+# .vercelignore
+server/
+api/**/*.ts
+**/*.map
