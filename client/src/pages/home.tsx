@@ -287,6 +287,53 @@ export default function Home() {
     showToast('Selection cleared - showing all properties', 'info');
   };
 
+  const handleDeleteProperty = (geocode: string) => {
+    // Remove property from master collection
+    setMasterPropertyCollection(prev => {
+      const newProperties = prev.properties.filter(
+        item => item.property.geocode !== geocode
+      );
+      return {
+        properties: newProperties,
+        totalCount: newProperties.length,
+        lastUpdated: new Date().toISOString()
+      };
+    });
+
+    // Update batch results if applicable
+    if (batchResults) {
+      setBatchResults(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          results: prev.results.filter(r => r.geocode !== geocode),
+          totalRequested: prev.totalRequested - 1,
+          totalSuccessful: prev.results.find(r => r.geocode === geocode)?.success 
+            ? prev.totalSuccessful - 1 
+            : prev.totalSuccessful,
+          totalFailed: prev.results.find(r => r.geocode === geocode)?.success === false
+            ? prev.totalFailed - 1
+            : prev.totalFailed
+        };
+      });
+    }
+
+    // Update batch property data
+    setBatchPropertyData(prev => prev.filter(p => p.geocode !== geocode));
+
+    // Clear selection if the deleted property was selected
+    if (selectedGeocode === geocode) {
+      setSelectedGeocode(null);
+    }
+
+    // Remove from selected property geocodes if applicable
+    if (selectedPropertyGeocodes.includes(geocode)) {
+      setSelectedPropertyGeocodes(prev => prev.filter(g => g !== geocode));
+    }
+
+    showToast('Property marker deleted from map', 'success');
+  };
+
   const handleCopyAddress = (address: string) => {
     showToast("Address copied to clipboard!", "success");
   };
@@ -434,6 +481,7 @@ export default function Home() {
                           isSelectionMode={isSelectionMode}
                           onPropertySelection={handlePropertySelection}
                           selectedPropertyGeocodes={selectedPropertyGeocodes}
+                          onDeleteProperty={handleDeleteProperty}
                         />
                       </div>
                     )}
@@ -716,6 +764,7 @@ export default function Home() {
                     isSelectionMode={isSelectionMode}
                     onPropertySelection={handlePropertySelection}
                     selectedPropertyGeocodes={selectedPropertyGeocodes}
+                    onDeleteProperty={handleDeleteProperty}
                   />
                 </div>
               </div>
