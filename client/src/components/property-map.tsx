@@ -5,7 +5,8 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import L from "leaflet";
 import "leaflet-draw";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, MousePointer, Circle, Map, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Minus, MousePointer, Circle, Map, Trash2, Palette, Tag, Home, Building, MapPin, Flag, Star, Heart } from "lucide-react";
 import { PropertyInfo } from "@shared/schema";
 import {
   DropdownMenu,
@@ -66,7 +67,18 @@ interface PropertyMapProps {
   onDeleteProperty?: (geocode: string) => void;
 }
 
-interface PropertyWithColor extends PropertyInfo {
+interface PropertyWithColor {
+  geocode: string;
+  address: string;
+  county?: string;
+  coordinates?: string;
+  legalDescription?: string;
+  lat?: number;
+  lng?: number;
+  parcelGeometry?: {
+    type: "Polygon";
+    coordinates: [number, number][][];
+  };
   color: string;
   colorIndex: number;
 }
@@ -79,6 +91,35 @@ const UNSELECTED_OPACITY = 0.4; // Dimmed when another property is selected
 // Performance constants
 const MAX_VISIBLE_PROPERTIES = 50;
 const POLYGON_SIMPLIFICATION_TOLERANCE = 0.0001;
+
+// Marker formatting options
+interface MarkerFormat {
+  icon?: string;
+  color?: string;
+  label?: string;
+}
+
+// Available icon options
+const ICON_OPTIONS = [
+  { id: 'default', name: 'Default', icon: MapPin },
+  { id: 'home', name: 'Home', icon: Home },
+  { id: 'building', name: 'Building', icon: Building },
+  { id: 'flag', name: 'Flag', icon: Flag },
+  { id: 'star', name: 'Star', icon: Star },
+  { id: 'heart', name: 'Heart', icon: Heart },
+];
+
+// Available color options
+const COLOR_OPTIONS = [
+  { id: 'blue', name: 'Blue', value: '#2196F3' },
+  { id: 'red', name: 'Red', value: '#F44336' },
+  { id: 'green', name: 'Green', value: '#4CAF50' },
+  { id: 'orange', name: 'Orange', value: '#FF9800' },
+  { id: 'purple', name: 'Purple', value: '#9C27B0' },
+  { id: 'pink', name: 'Pink', value: '#E91E63' },
+  { id: 'teal', name: 'Teal', value: '#009688' },
+  { id: 'yellow', name: 'Yellow', value: '#FFC107' },
+];
 
 function MapController({ properties }: { properties: PropertyInfo[] }) {
   const map = useMap();
@@ -261,6 +302,139 @@ function isPointInPolygon(point: L.LatLng, polygon: L.LatLng[]): boolean {
   return inside;
 }
 
+// Formatting Toolbar Component
+interface FormattingToolbarProps {
+  geocode: string;
+  currentFormat: MarkerFormat;
+  onFormatChange: (geocode: string, format: MarkerFormat) => void;
+}
+
+function FormattingToolbar({ geocode, currentFormat, onFormatChange }: FormattingToolbarProps) {
+  const [activePanel, setActivePanel] = useState<'icon' | 'color' | 'label' | null>(null);
+  const [labelInput, setLabelInput] = useState(currentFormat.label || '');
+
+  useEffect(() => {
+    setLabelInput(currentFormat.label || '');
+  }, [currentFormat.label]);
+
+  const handleIconSelect = (iconId: string) => {
+    onFormatChange(geocode, { ...currentFormat, icon: iconId });
+    setActivePanel(null);
+  };
+
+  const handleColorSelect = (colorValue: string) => {
+    onFormatChange(geocode, { ...currentFormat, color: colorValue });
+    setActivePanel(null);
+  };
+
+  const handleLabelChange = (value: string) => {
+    setLabelInput(value);
+    onFormatChange(geocode, { ...currentFormat, label: value });
+  };
+
+  const togglePanel = (panel: 'icon' | 'color' | 'label') => {
+    setActivePanel(activePanel === panel ? null : panel);
+  };
+
+  return (
+    <div className="mt-2 mb-2 border-t border-b border-gray-300 py-2">
+      {/* Toolbar Buttons */}
+      <div className="flex gap-1 mb-2">
+        <Button
+          onClick={() => togglePanel('icon')}
+          variant={activePanel === 'icon' ? 'default' : 'outline'}
+          size="sm"
+          className="flex-1 text-xs"
+          data-testid={`button-icon-picker-${geocode}`}
+        >
+          <MapPin className="h-3 w-3 mr-1" />
+          Icon
+        </Button>
+        <Button
+          onClick={() => togglePanel('color')}
+          variant={activePanel === 'color' ? 'default' : 'outline'}
+          size="sm"
+          className="flex-1 text-xs"
+          data-testid={`button-color-picker-${geocode}`}
+        >
+          <Palette className="h-3 w-3 mr-1" />
+          Color
+        </Button>
+        <Button
+          onClick={() => togglePanel('label')}
+          variant={activePanel === 'label' ? 'default' : 'outline'}
+          size="sm"
+          className="flex-1 text-xs"
+          data-testid={`button-label-editor-${geocode}`}
+        >
+          <Tag className="h-3 w-3 mr-1" />
+          Label
+        </Button>
+      </div>
+
+      {/* Icon Picker Panel */}
+      {activePanel === 'icon' && (
+        <div className="grid grid-cols-3 gap-1 p-2 bg-gray-50 rounded" data-testid={`panel-icon-picker-${geocode}`}>
+          {ICON_OPTIONS.map((iconOption) => {
+            const IconComponent = iconOption.icon;
+            const isSelected = currentFormat.icon === iconOption.id;
+            return (
+              <button
+                key={iconOption.id}
+                onClick={() => handleIconSelect(iconOption.id)}
+                className={`p-2 rounded border text-center transition-colors ${
+                  isSelected 
+                    ? 'bg-primary text-white border-primary' 
+                    : 'bg-white border-gray-300 hover:bg-gray-100'
+                }`}
+                data-testid={`icon-option-${iconOption.id}-${geocode}`}
+              >
+                <IconComponent className="h-4 w-4 mx-auto" />
+                <div className="text-xs mt-1">{iconOption.name}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Color Picker Panel */}
+      {activePanel === 'color' && (
+        <div className="flex gap-1 p-2 bg-gray-50 rounded flex-wrap" data-testid={`panel-color-picker-${geocode}`}>
+          {COLOR_OPTIONS.map((colorOption) => {
+            const isSelected = currentFormat.color === colorOption.value;
+            return (
+              <button
+                key={colorOption.id}
+                onClick={() => handleColorSelect(colorOption.value)}
+                className={`w-8 h-8 rounded-full border-2 transition-transform ${
+                  isSelected ? 'border-gray-900 scale-110' : 'border-gray-300'
+                }`}
+                style={{ backgroundColor: colorOption.value }}
+                title={colorOption.name}
+                data-testid={`color-option-${colorOption.id}-${geocode}`}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Label Editor Panel */}
+      {activePanel === 'label' && (
+        <div className="p-2 bg-gray-50 rounded" data-testid={`panel-label-editor-${geocode}`}>
+          <Input
+            type="text"
+            placeholder="Enter custom label..."
+            value={labelInput}
+            onChange={(e) => handleLabelChange(e.target.value)}
+            className="text-sm"
+            data-testid={`input-label-${geocode}`}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BasemapSelector({ 
   selectedBasemap, 
   onBasemapChange 
@@ -385,6 +559,9 @@ export const PropertyMap = memo(function PropertyMap({
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   
+  // Marker formatting state - stores custom icon, color, and label per geocode
+  const [markerFormats, setMarkerFormats] = useState<Record<string, MarkerFormat>>({});
+  
   // Basemap state management with localStorage persistence
   const [selectedBasemap, setSelectedBasemap] = useState<string>(() => {
     if (typeof window !== 'undefined') {
@@ -395,6 +572,14 @@ export const PropertyMap = memo(function PropertyMap({
     }
     return DEFAULT_BASEMAP;
   });
+
+  // Handler to update marker formatting
+  const handleFormatChange = (geocode: string, format: MarkerFormat) => {
+    setMarkerFormats(prev => ({
+      ...prev,
+      [geocode]: format
+    }));
+  };
 
   // Persist basemap selection to localStorage
   useEffect(() => {
@@ -422,31 +607,61 @@ export const PropertyMap = memo(function PropertyMap({
     }));
   }, [properties]);
 
-  // Custom marker icons for selected and unselected properties
-  const { selectedIcon, unselectedIcon, dimmedIcon } = useMemo(() => {
-    const selectedIcon = L.divIcon({
-      className: 'custom-marker-selected',
-      html: `<div style="background-color: ${SELECTED_COLOR}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4); animation: pulse 2s infinite;"></div>`,
-      iconSize: [30, 30],
-      iconAnchor: [15, 15]
-    });
+  // Helper function to get icon shape based on selected icon type
+  const getIconShape = (iconId?: string) => {
+    switch (iconId) {
+      case 'home':
+        return 'polygon(50% 0%, 100% 38%, 82% 38%, 82% 100%, 18% 100%, 18% 38%, 0% 38%)'; // House shape
+      case 'building':
+        return 'rect'; // Square
+      case 'flag':
+        return 'polygon(20% 20%, 80% 35%, 20% 50%, 20% 80%, 30% 80%, 30% 20%)'; // Flag shape
+      case 'star':
+        return 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)'; // Star
+      case 'heart':
+        return 'polygon(50% 80%, 100% 40%, 100% 20%, 80% 0%, 50% 20%, 20% 0%, 0% 20%, 0% 40%)'; // Heart approximation
+      default:
+        return '50%'; // Circle (border-radius)
+    }
+  };
+
+  // Helper function to create custom marker icon with formatting
+  const createCustomIcon = (
+    geocode: string, 
+    baseColor: string, 
+    size: number, 
+    isSelected: boolean, 
+    isDimmed: boolean
+  ) => {
+    const format = markerFormats[geocode] || {};
+    const markerColor = format.color || baseColor;
+    const opacity = isDimmed ? UNSELECTED_OPACITY : 1;
+    const animation = isSelected ? 'animation: pulse 2s infinite;' : '';
+    const iconShape = getIconShape(format.icon);
     
-    const unselectedIcon = L.divIcon({
-      className: 'custom-marker',
-      html: `<div style="background-color: ${PROPERTY_COLOR}; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-      iconSize: [26, 26],
-      iconAnchor: [13, 13]
-    });
+    // Determine if it's a polygon shape or border-radius
+    const isPolygonShape = iconShape !== '50%' && iconShape !== 'rect';
+    const isRect = iconShape === 'rect';
     
-    const dimmedIcon = L.divIcon({
-      className: 'custom-marker-dimmed',
-      html: `<div style="background-color: ${PROPERTY_COLOR}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.2); opacity: ${UNSELECTED_OPACITY};"></div>`,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
-    });
+    let markerStyle = '';
+    if (isPolygonShape) {
+      // Use clip-path for complex shapes - use filter drop-shadow instead of border
+      markerStyle = `background-color: ${markerColor}; width: ${size}px; height: ${size}px; clip-path: ${iconShape}; filter: drop-shadow(0 0 2px white) drop-shadow(0 3px 6px rgba(0,0,0,0.4)); opacity: ${opacity}; ${animation}`;
+    } else if (isRect) {
+      // Square shape
+      markerStyle = `background-color: ${markerColor}; width: ${size}px; height: ${size}px; border-radius: 15%; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4); opacity: ${opacity}; ${animation}`;
+    } else {
+      // Default circle
+      markerStyle = `background-color: ${markerColor}; width: ${size}px; height: ${size}px; border-radius: ${iconShape}; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4); opacity: ${opacity}; ${animation}`;
+    }
     
-    return { selectedIcon, unselectedIcon, dimmedIcon };
-  }, []);
+    return L.divIcon({
+      className: `custom-marker-${geocode}`,
+      html: `<div style="${markerStyle}"></div>`,
+      iconSize: [size + 6, size + 6],
+      iconAnchor: [(size + 6) / 2, (size + 6) / 2]
+    });
+  };
   
   // Memoized center point calculation for initial map positioning
   const { centerLat, centerLng } = useMemo(() => {
@@ -524,20 +739,24 @@ export const PropertyMap = memo(function PropertyMap({
           const isSelectionActive = selectedPropertyGeocodes.length > 0;
           const shouldBeDimmedBySelection = isSelectionActive && !isInSelectionGroup;
           
+          // Get custom color from formatting if available
+          const customFormat = markerFormats[property.geocode] || {};
+          const customColor = customFormat.color;
+          
           // Determine colors and opacity based on selection state and group selection
-          let polygonColor = PROPERTY_COLOR;
+          let polygonColor = customColor || PROPERTY_COLOR;
           let polygonOpacity = 1;
           let fillOpacity = 0.1;
           let weight = 2;
           
           if (isSelected) {
             // Individual property selection (from clicking)
-            polygonColor = SELECTED_COLOR;
+            polygonColor = customColor || SELECTED_COLOR;
             weight = 3;
             fillOpacity = 0.2;
           } else if (isInSelectionGroup) {
             // Property is in the current selection group
-            polygonColor = '#4CAF50'; // Green for group selection
+            polygonColor = customColor || '#4CAF50'; // Green for group selection
             weight = 3;
             fillOpacity = 0.15;
           } else if (shouldBeDimmed || shouldBeDimmedBySelection) {
@@ -547,23 +766,32 @@ export const PropertyMap = memo(function PropertyMap({
           }
           
           // Choose appropriate icon based on selection states
-          let markerIcon = unselectedIcon;
+          let markerIcon;
+          let iconSize = 20;
+          let iconBaseColor = PROPERTY_COLOR;
+          
           if (isSelected) {
-            markerIcon = selectedIcon;
+            iconSize = 24;
+            iconBaseColor = SELECTED_COLOR;
+            markerIcon = createCustomIcon(property.geocode, iconBaseColor, iconSize, true, false);
           } else if (isInSelectionGroup) {
-            // Create a special icon for group-selected properties
-            markerIcon = L.divIcon({
-              className: 'custom-marker-group-selected',
-              html: `<div style="background-color: #4CAF50; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4);"></div>`,
-              iconSize: [28, 28],
-              iconAnchor: [14, 14]
-            });
+            iconSize = 22;
+            iconBaseColor = '#4CAF50';
+            markerIcon = createCustomIcon(property.geocode, iconBaseColor, iconSize, false, false);
           } else if (shouldBeDimmed || shouldBeDimmedBySelection) {
-            markerIcon = dimmedIcon;
+            iconSize = 16;
+            markerIcon = createCustomIcon(property.geocode, iconBaseColor, iconSize, false, true);
+          } else {
+            markerIcon = createCustomIcon(property.geocode, iconBaseColor, iconSize, false, false);
           }
           
+          // Include format in key to force re-render when format changes
+          const formatKey = markerFormats[property.geocode] 
+            ? `${markerFormats[property.geocode].icon || 'default'}-${markerFormats[property.geocode].color || 'default'}-${markerFormats[property.geocode].label || 'none'}`
+            : 'no-format';
+          
           return (
-            <div key={`property-${property.geocode}-${property.colorIndex}`}>
+            <div key={`property-${property.geocode}-${property.colorIndex}-${formatKey}`}>
               {/* Render parcel polygon if geometry is available */}
               {property.parcelGeometry?.coordinates && (
                 <Polygon
@@ -583,6 +811,19 @@ export const PropertyMap = memo(function PropertyMap({
                       </strong>
                       <div className="text-sm font-medium mb-1">{property.geocode}</div>
                       <span className="text-sm">{property.address}</span>
+                      {markerFormats[property.geocode]?.label && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                          <strong>Label:</strong> {markerFormats[property.geocode].label}
+                        </div>
+                      )}
+                      
+                      {/* Formatting Toolbar */}
+                      <FormattingToolbar
+                        geocode={property.geocode}
+                        currentFormat={markerFormats[property.geocode] || {}}
+                        onFormatChange={handleFormatChange}
+                      />
+                      
                       {onDeleteProperty && (
                         <Button
                           onClick={(e) => {
@@ -616,6 +857,19 @@ export const PropertyMap = memo(function PropertyMap({
                       </strong>
                       <div className="text-sm font-medium mb-1">{property.geocode}</div>
                       <span className="text-sm">{property.address}</span>
+                      {markerFormats[property.geocode]?.label && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                          <strong>Label:</strong> {markerFormats[property.geocode].label}
+                        </div>
+                      )}
+                      
+                      {/* Formatting Toolbar */}
+                      <FormattingToolbar
+                        geocode={property.geocode}
+                        currentFormat={markerFormats[property.geocode] || {}}
+                        onFormatChange={handleFormatChange}
+                      />
+                      
                       {onDeleteProperty && (
                         <Button
                           onClick={(e) => {
