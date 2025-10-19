@@ -311,11 +311,14 @@ interface FormattingToolbarProps {
 
 function FormattingToolbar({ geocode, currentFormat, onFormatChange }: FormattingToolbarProps) {
   const [activePanel, setActivePanel] = useState<'icon' | 'color' | 'label' | null>(null);
-  const [labelInput, setLabelInput] = useState(currentFormat.label || '');
+  const [labelDraft, setLabelDraft] = useState(currentFormat.label || '');
 
+  // Initialize draft from current marker label when opening label panel
   useEffect(() => {
-    setLabelInput(currentFormat.label || '');
-  }, [currentFormat.label]);
+    if (activePanel === 'label') {
+      setLabelDraft(currentFormat.label || '');
+    }
+  }, [activePanel, currentFormat.label]);
 
   const handleIconSelect = (iconId: string) => {
     onFormatChange(geocode, { ...currentFormat, icon: iconId });
@@ -327,9 +330,15 @@ function FormattingToolbar({ geocode, currentFormat, onFormatChange }: Formattin
     setActivePanel(null);
   };
 
-  const handleLabelChange = (value: string) => {
-    setLabelInput(value);
-    onFormatChange(geocode, { ...currentFormat, label: value });
+  const saveLabelChange = () => {
+    onFormatChange(geocode, { ...currentFormat, label: labelDraft });
+  };
+
+  const handleLabelKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      saveLabelChange();
+      e.currentTarget.blur();
+    }
   };
 
   const togglePanel = (panel: 'icon' | 'color' | 'label') => {
@@ -420,14 +429,24 @@ function FormattingToolbar({ geocode, currentFormat, onFormatChange }: Formattin
 
       {/* Label Editor Panel */}
       {activePanel === 'label' && (
-        <div className="p-2 bg-gray-50 rounded" data-testid={`panel-label-editor-${geocode}`}>
+        <div 
+          className="p-2 bg-gray-50 rounded" 
+          data-testid={`panel-label-editor-${geocode}`}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
           <Input
             type="text"
             placeholder="Enter custom label..."
-            value={labelInput}
-            onChange={(e) => handleLabelChange(e.target.value)}
+            value={labelDraft}
+            onChange={(e) => setLabelDraft(e.target.value)}
+            onBlur={saveLabelChange}
+            onKeyDown={handleLabelKeyDown}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             className="text-sm"
             data-testid={`input-label-${geocode}`}
+            autoFocus
           />
         </div>
       )}
