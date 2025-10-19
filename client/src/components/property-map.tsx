@@ -5,7 +5,7 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import L from "leaflet";
 import "leaflet-draw";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, MousePointer, Circle, Map } from "lucide-react";
+import { Plus, Minus, MousePointer, Circle, Map, Trash2 } from "lucide-react";
 import { PropertyInfo } from "@shared/schema";
 import {
   DropdownMenu,
@@ -63,6 +63,7 @@ interface PropertyMapProps {
   isSelectionMode?: boolean;
   onPropertySelection?: (geocodes: string[]) => void;
   selectedPropertyGeocodes?: string[];
+  onDeleteProperty?: (geocode: string) => void;
 }
 
 interface PropertyWithColor extends PropertyInfo {
@@ -379,7 +380,8 @@ export const PropertyMap = memo(function PropertyMap({
   selectedGeocode,
   isSelectionMode = false,
   onPropertySelection,
-  selectedPropertyGeocodes = [] 
+  selectedPropertyGeocodes = [],
+  onDeleteProperty
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   
@@ -581,6 +583,21 @@ export const PropertyMap = memo(function PropertyMap({
                       </strong>
                       <div className="text-sm font-medium mb-1">{property.geocode}</div>
                       <span className="text-sm">{property.address}</span>
+                      {onDeleteProperty && (
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteProperty(property.geocode);
+                          }}
+                          variant="destructive"
+                          size="sm"
+                          className="mt-2 w-full bg-red-600 hover:bg-red-700 text-white"
+                          data-testid={`button-delete-${property.geocode}`}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete Marker
+                        </Button>
+                      )}
                     </div>
                   </Popup>
                 </Polygon>
@@ -599,6 +616,21 @@ export const PropertyMap = memo(function PropertyMap({
                       </strong>
                       <div className="text-sm font-medium mb-1">{property.geocode}</div>
                       <span className="text-sm">{property.address}</span>
+                      {onDeleteProperty && (
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteProperty(property.geocode);
+                          }}
+                          variant="destructive"
+                          size="sm"
+                          className="mt-2 w-full bg-red-600 hover:bg-red-700 text-white"
+                          data-testid={`button-delete-${property.geocode}`}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete Marker
+                        </Button>
+                      )}
                     </div>
                   </Popup>
                 </Marker>
