@@ -5,16 +5,17 @@
 This is a full-stack web application that allows users to look up Montana property information using geocodes. Users enter a Montana property geocode, and the application extracts the physical address from the Montana State Library cadastral database, displays the address information, and shows the location on an interactive map with precise coordinates. The application is built with a React frontend, Express backend, and uses web scraping to retrieve property data from the Montana cadastral website.
 
 ## Recent Changes (October 20, 2025)
-- **Point Formatting Toolbar**: Added interactive marker customization with icon picker, color picker, and label editor in marker popups
+- **Point Formatting Toolbar**: Added interactive marker customization with icon picker, color picker, and note editor in marker popups
 - **Lucide Icon Integration**: Replaced CSS-based icon shapes with actual Lucide React icon components (Home, Building, Flag, Star, Heart, MapPin) for crisp vector rendering
 - **Custom Marker Colors**: Added 8-color palette (blue, red, green, orange, purple, pink, teal, yellow) for marker customization
-- **Custom Marker Labels**: Text input field allows users to add custom labels to markers that persist in popups
-- **LocalStorage Persistence**: All marker formatting (icon/color/label) persists across map size toggles and page reloads using stable geocode keys
-- **Real-time Updates**: Marker appearance updates immediately when selecting icons/colors or typing labels
-- **Improved Label Editor UX**: Label input uses draft state with save-on-blur/Enter to prevent popup closing while typing
+- **Custom Marker Notes**: Text input field allows users to add custom notes to markers that persist in popups
+- **LocalStorage Persistence**: All marker formatting (icon/color/note) persists across map size toggles and page reloads using stable geocode keys
+- **Real-time Updates**: Marker appearance updates immediately when selecting icons/colors or typing notes
+- **Improved Note Editor UX**: Note input uses draft state with save-on-blur/Enter to prevent popup closing while typing
 - **Dark Theme Popup Styling**: Map popups now match the app's dark UI with proper contrast, using CSS variables for surface colors, borders, and text
-- **Enhanced Toolbar Panels**: Icon/color/label picker panels use dark backgrounds (gray-800) with improved visibility and focus states
-- **Accessible Inputs**: Label input field styled with dark background, white text, gray placeholder, and primary focus ring for clear visibility
+- **Enhanced Toolbar Panels**: Icon/color/note picker panels use dark backgrounds (gray-800) with improved visibility and focus states
+- **Accessible Inputs**: Note input field styled with dark background, white text, gray placeholder, and primary focus ring for clear visibility
+- **Consistent Terminology**: Updated from "Label" to "Note" throughout UI for clarity (toolbar button, input placeholder, display text, variable names, data-testid attributes)
 - **Frontend-only Implementation**: No backend changes required, all formatting stored in browser localStorage
 - **SVG Icon Rendering**: Uses ReactDOMServer.renderToString() to convert Lucide icon components to SVG strings for Leaflet divIcon integration
 

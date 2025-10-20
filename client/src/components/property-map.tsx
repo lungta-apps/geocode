@@ -126,7 +126,7 @@ const POLYGON_SIMPLIFICATION_TOLERANCE = 0.0001;
 interface MarkerFormat {
   icon?: string;
   color?: string;
-  label?: string;
+  note?: string;
 }
 
 // Available icon options
@@ -353,16 +353,16 @@ function FormattingToolbar({
   onFormatChange,
 }: FormattingToolbarProps) {
   const [activePanel, setActivePanel] = useState<
-    "icon" | "color" | "label" | null
+    "icon" | "color" | "note" | null
   >(null);
-  const [labelDraft, setLabelDraft] = useState(currentFormat.label || "");
+  const [noteDraft, setNoteDraft] = useState(currentFormat.note || "");
 
-  // Initialize draft from current marker label when opening label panel
+  // Initialize draft from current marker note when opening note panel
   useEffect(() => {
-    if (activePanel === "label") {
-      setLabelDraft(currentFormat.label || "");
+    if (activePanel === "note") {
+      setNoteDraft(currentFormat.note || "");
     }
-  }, [activePanel, currentFormat.label]);
+  }, [activePanel, currentFormat.note]);
 
   const handleIconSelect = (iconId: string) => {
     onFormatChange(geocode, { ...currentFormat, icon: iconId });
@@ -374,18 +374,18 @@ function FormattingToolbar({
     setActivePanel(null);
   };
 
-  const saveLabelChange = () => {
-    onFormatChange(geocode, { ...currentFormat, label: labelDraft });
+  const saveNoteChange = () => {
+    onFormatChange(geocode, { ...currentFormat, note: noteDraft });
   };
 
-  const handleLabelKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      saveLabelChange();
+      saveNoteChange();
       e.currentTarget.blur();
     }
   };
 
-  const togglePanel = (panel: "icon" | "color" | "label") => {
+  const togglePanel = (panel: "icon" | "color" | "note") => {
     setActivePanel(activePanel === panel ? null : panel);
   };
 
@@ -414,14 +414,14 @@ function FormattingToolbar({
           Color
         </Button>
         <Button
-          onClick={() => togglePanel("label")}
-          variant={activePanel === "label" ? "default" : "outline"}
+          onClick={() => togglePanel("note")}
+          variant={activePanel === "note" ? "default" : "outline"}
           size="sm"
           className="flex-1 text-xs"
-          data-testid={`button-label-editor-${geocode}`}
+          data-testid={`button-note-editor-${geocode}`}
         >
           <Tag className="h-3 w-3 mr-1" />
-          Label
+          Note
         </Button>
       </div>
 
@@ -477,25 +477,25 @@ function FormattingToolbar({
         </div>
       )}
 
-      {/* Label Editor Panel */}
-      {activePanel === "label" && (
+      {/* Note Editor Panel */}
+      {activePanel === "note" && (
         <div
           className="p-2 bg-gray-800 rounded border border-gray-600"
-          data-testid={`panel-label-editor-${geocode}`}
+          data-testid={`panel-note-editor-${geocode}`}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           <Input
             type="text"
-            placeholder="Enter custom label..."
-            value={labelDraft}
-            onChange={(e) => setLabelDraft(e.target.value)}
-            onBlur={saveLabelChange}
-            onKeyDown={handleLabelKeyDown}
+            placeholder="Enter note..."
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onBlur={saveNoteChange}
+            onKeyDown={handleNoteKeyDown}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             className="text-sm bg-gray-900 border-gray-600 text-white placeholder:text-gray-400 focus:ring-primary focus:border-primary"
-            data-testid={`input-label-${geocode}`}
+            data-testid={`input-note-${geocode}`}
             autoFocus
           />
         </div>
@@ -659,7 +659,7 @@ export const PropertyMap = memo(function PropertyMap({
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
 
-  // Marker formatting state - stores custom icon, color, and label per geocode
+  // Marker formatting state - stores custom icon, color, and note per geocode
   // Initialize from localStorage to persist across map size toggles and page reloads
   const [markerFormats, setMarkerFormats] = useState<
     Record<string, MarkerFormat>
@@ -944,7 +944,7 @@ export const PropertyMap = memo(function PropertyMap({
 
             // Include format in key to force re-render when format changes
             const formatKey = markerFormats[property.geocode]
-              ? `${markerFormats[property.geocode].icon || "default"}-${markerFormats[property.geocode].color || "default"}-${markerFormats[property.geocode].label || "none"}`
+              ? `${markerFormats[property.geocode].icon || "default"}-${markerFormats[property.geocode].color || "default"}-${markerFormats[property.geocode].note || "none"}`
               : "no-format";
 
             return (
@@ -976,10 +976,10 @@ export const PropertyMap = memo(function PropertyMap({
                           {property.geocode}
                         </div>
                         <span className="text-sm text-on-surface-variant">{property.address}</span>
-                        {markerFormats[property.geocode]?.label && (
+                        {markerFormats[property.geocode]?.note && (
                           <div className="mt-2 p-2 bg-gray-800 border border-gray-600 rounded text-sm">
-                            <strong className="text-white">Label:</strong>{" "}
-                            <span className="text-gray-200">{markerFormats[property.geocode].label}</span>
+                            <strong className="text-white">Note:</strong>{" "}
+                            <span className="text-gray-200">{markerFormats[property.geocode].note}</span>
                           </div>
                         )}
 
@@ -1027,10 +1027,10 @@ export const PropertyMap = memo(function PropertyMap({
                           {property.geocode}
                         </div>
                         <span className="text-sm text-on-surface-variant">{property.address}</span>
-                        {markerFormats[property.geocode]?.label && (
+                        {markerFormats[property.geocode]?.note && (
                           <div className="mt-2 p-2 bg-gray-800 border border-gray-600 rounded text-sm">
-                            <strong className="text-white">Label:</strong>{" "}
-                            <span className="text-gray-200">{markerFormats[property.geocode].label}</span>
+                            <strong className="text-white">Note:</strong>{" "}
+                            <span className="text-gray-200">{markerFormats[property.geocode].note}</span>
                           </div>
                         )}
 
