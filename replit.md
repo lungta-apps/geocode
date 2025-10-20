@@ -19,6 +19,8 @@ This full-stack web application allows users to look up Montana property informa
 - **Keyboard Support**: ESC closes toolbar (selection preserved), Enter (without Shift) saves batch notes
 - **Close Behavior**: Toolbar closes via "Exit Selection" button or ESC key; selection remains active until explicitly cleared
 - **Auto-Close Guard**: Toolbar automatically closes when selection count reaches zero
+- **Preserved Map View**: Toggling "Select Group" or "Exit Selection" no longer resets zoom or recenter; map view stays exactly where user positioned it
+- **Smart Auto-Zoom**: Map only auto-zooms when new properties are added, not when filtering existing properties via selection mode
 - **Accessibility**: Header has cursor-grab/grabbing feedback and aria-grabbed attribute during drag
 - **Portal Rendering**: Uses React createPortal to render at end of <body> for proper z-index layering above map controls
 

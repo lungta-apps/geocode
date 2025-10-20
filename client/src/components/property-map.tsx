@@ -168,9 +168,21 @@ const COLOR_OPTIONS = [
 
 function MapController({ properties }: { properties: PropertyInfo[] }) {
   const map = useMap();
+  const previousCountRef = useRef<number>(0);
 
   useEffect(() => {
     if (properties.length === 0) return;
+
+    // Only auto-zoom when properties count increases (new properties added)
+    // This prevents auto-zoom when toggling selection mode (which just filters existing properties)
+    if (properties.length <= previousCountRef.current) {
+      // Update the count but don't zoom - this is likely just filtering
+      previousCountRef.current = properties.length;
+      return;
+    }
+
+    // Update the previous count
+    previousCountRef.current = properties.length;
 
     // Collect all coordinates for bounds calculation
     const allCoordinates: [number, number][] = [];
