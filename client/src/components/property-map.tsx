@@ -1,5 +1,8 @@
+import { Edit2, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useEffect, useRef, useMemo, memo, useState } from "react";
 import { renderToString } from "react-dom/server";
+import { createPortal } from "react-dom";
 import {
   MapContainer,
   TileLayer,
@@ -356,7 +359,10 @@ function isPointInPolygon(point: L.LatLng, polygon: L.LatLng[]): boolean {
 interface GroupToolbarProps {
   selectedGeocodes: string[];
   markerFormats: Record<string, MarkerFormat>;
-  onBatchFormatChange: (geocodes: string[], formatUpdates: Partial<MarkerFormat>) => void;
+  onBatchFormatChange: (
+    geocodes: string[],
+    formatUpdates: Partial<MarkerFormat>,
+  ) => void;
   onCreateGroupLabel: (lat: number, lng: number) => void;
   properties: PropertyInfo[];
   onClose: () => void;
@@ -374,11 +380,63 @@ function GroupToolbar({
     "icon" | "color" | "note" | null
   >(null);
   const [noteDraft, setNoteDraft] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const toolbarStartPos = useRef<{ x: number; y: number } | null>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+
+  // Load position from localStorage or calculate initial center
+  useEffect(() => {
+    const savedPos = localStorage.getItem("groupToolbarPos");
+    if (savedPos) {
+      try {
+        const parsed = JSON.parse(savedPos);
+        // Validate position is within viewport
+        if (
+          parsed.x >= 0 &&
+          parsed.y >= 0 &&
+          parsed.x < window.innerWidth - 100 &&
+          parsed.y < window.innerHeight - 100
+        ) {
+          setPosition(parsed);
+          return;
+        }
+      } catch (e) {
+        // Invalid saved position, fall through to calculate center
+      }
+    }
+
+    // Calculate initial center position over map container
+    const mapContainer = document.querySelector('.leaflet-container');
+    if (mapContainer) {
+      const rect = mapContainer.getBoundingClientRect();
+      const toolbarWidth = 288; // w-72 = 18rem = 288px
+      const toolbarHeight = 300; // Approximate height
+      setPosition({
+        x: rect.left + (rect.width - toolbarWidth) / 2,
+        y: rect.top + (rect.height - toolbarHeight) / 2,
+      });
+    } else {
+      // Fallback to window center
+      setPosition({
+        x: (window.innerWidth - 288) / 2,
+        y: (window.innerHeight - 300) / 2,
+      });
+    }
+  }, []);
+
+  // Save position to localStorage whenever it changes
+  useEffect(() => {
+    if (position) {
+      localStorage.setItem("groupToolbarPos", JSON.stringify(position));
+    }
+  }, [position]);
 
   // Calculate centroid of selected markers
   const calculateCentroid = () => {
     const selectedProperties = properties.filter((p) =>
-      selectedGeocodes.includes(p.geocode)
+      selectedGeocodes.includes(p.geocode),
     );
     if (selectedProperties.length === 0) return { lat: 0, lng: 0 };
 
@@ -430,6 +488,61 @@ function GroupToolbar({
     setActivePanel(activePanel === panel ? null : panel);
   };
 
+  // Dragging handlers
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Only drag from header, not from buttons
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "BUTTON" ||
+      target.closest("button") ||
+      target.tagName === "TEXTAREA" ||
+      target.closest("textarea")
+    ) {
+      return;
+    }
+
+    setIsDragging(true);
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+    toolbarStartPos.current = position || { x: 0, y: 0 };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || !dragStartPos.current || !toolbarStartPos.current) return;
+
+    const dx = e.clientX - dragStartPos.current.x;
+    const dy = e.clientY - dragStartPos.current.y;
+
+    const newX = toolbarStartPos.current.x + dx;
+    const newY = toolbarStartPos.current.y + dy;
+
+    // Constrain within viewport (with some margin)
+    const toolbarWidth = toolbarRef.current?.offsetWidth || 288;
+    const toolbarHeight = toolbarRef.current?.offsetHeight || 300;
+    const margin = 20;
+
+    const constrainedX = Math.max(
+      margin,
+      Math.min(newX, window.innerWidth - toolbarWidth - margin),
+    );
+    const constrainedY = Math.max(
+      margin,
+      Math.min(newY, window.innerHeight - toolbarHeight - margin),
+    );
+
+    setPosition({ x: constrainedX, y: constrainedY });
+    e.stopPropagation();
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false);
+    dragStartPos.current = null;
+    toolbarStartPos.current = null;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    e.stopPropagation();
+  };
+
   // Close toolbar on Esc key
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -441,16 +554,34 @@ function GroupToolbar({
     return () => document.removeEventListener("keydown", handleEsc);
   }, [activePanel, onClose]);
 
-  return (
-    <div className="fixed top-20 right-4 z-[1000] w-72 bg-gray-900 border border-gray-600 rounded-lg shadow-2xl p-3">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
+  if (!position) return null;
+
+  const toolbarContent = (
+    <div
+      ref={toolbarRef}
+      className="fixed z-[9999] w-72 bg-gray-900 border border-gray-600 rounded-lg shadow-2xl p-3"
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        cursor: isDragging ? "grabbing" : "default",
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      data-testid="group-toolbar"
+    >
+      {/* Header - Drag Handle */}
+      <div
+        className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700 cursor-grab active:cursor-grabbing"
+        aria-grabbed={isDragging}
+      >
         <div className="flex items-center gap-2">
           <Edit2 className="h-4 w-4 text-blue-400" />
-          <span className="text-sm font-semibold text-white">
-            Group Format
-          </span>
-          <Badge variant="secondary" className="bg-green-800 text-green-100 text-xs">
+          <span className="text-sm font-semibold text-white">Group Format</span>
+          <Badge
+            variant="secondary"
+            className="bg-green-800 text-green-100 text-xs"
+          >
             {selectedGeocodes.length} Selected
           </Badge>
         </div>
@@ -595,6 +726,9 @@ function GroupToolbar({
       )}
     </div>
   );
+
+  // Render via portal at end of body for proper z-index layering
+  return createPortal(toolbarContent, document.body);
 }
 
 // Formatting Toolbar Component
@@ -861,10 +995,10 @@ function DraggableLabel({ label, onUpdate, onDelete }: DraggableLabelProps) {
   // Custom drag handling
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isEditing) return;
-    
+
     e.stopPropagation();
     e.preventDefault();
-    
+
     setIsDragging(true);
     dragStartPos.current = { x: e.clientX, y: e.clientY };
     labelStartLatLng.current = { lat: label.lat, lng: label.lng };
@@ -886,7 +1020,10 @@ function DraggableLabel({ label, onUpdate, onDelete }: DraggableLabelProps) {
       ]);
 
       // Add delta to get new container point
-      const newPoint = new L.Point(startPoint.x + deltaX, startPoint.y + deltaY);
+      const newPoint = new L.Point(
+        startPoint.x + deltaX,
+        startPoint.y + deltaY,
+      );
 
       // Convert back to lat/lng
       const newLatLng = map.containerPointToLatLng(newPoint);
@@ -1227,7 +1364,7 @@ export const PropertyMap = memo(function PropertyMap({
   // Handler for batch formatting (group edit)
   const handleBatchFormatChange = (
     geocodes: string[],
-    formatUpdates: Partial<MarkerFormat>
+    formatUpdates: Partial<MarkerFormat>,
   ) => {
     setMarkerFormats((prev) => {
       const updated = { ...prev };
@@ -1258,9 +1395,7 @@ export const PropertyMap = memo(function PropertyMap({
   // Handler to update a label
   const handleUpdateLabel = (id: string, updates: Partial<MapLabel>) => {
     setMapLabels((prev) =>
-      prev.map((label) =>
-        label.id === id ? { ...label, ...updates } : label
-      )
+      prev.map((label) => (label.id === id ? { ...label, ...updates } : label)),
     );
   };
 
@@ -1327,26 +1462,27 @@ export const PropertyMap = memo(function PropertyMap({
     const format = markerFormats[geocode] || {};
     const markerColor = format.color || baseColor;
     const opacity = isDimmed ? UNSELECTED_OPACITY : 1;
-    
+
     // Get the appropriate Lucide icon component
     const IconComponent = getLucideIcon(format.icon);
-    
+
     // Render the Lucide icon to SVG string
     const iconSvg = renderToString(
-      <IconComponent 
-        size={size} 
+      <IconComponent
+        size={size}
         color={markerColor}
         fill={markerColor}
         strokeWidth={2.5}
-        style={{ 
-          filter: 'drop-shadow(0 0 2px white) drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
-          opacity: opacity
+        style={{
+          filter:
+            "drop-shadow(0 0 2px white) drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+          opacity: opacity,
         }}
-      />
+      />,
     );
-    
+
     // Add pulse animation for selected markers
-    const animationClass = isSelected ? 'marker-pulse' : '';
+    const animationClass = isSelected ? "marker-pulse" : "";
 
     return L.divIcon({
       className: `custom-marker-${geocode} ${animationClass}`,
@@ -1548,11 +1684,15 @@ export const PropertyMap = memo(function PropertyMap({
                         <div className="text-sm font-medium mb-1">
                           {property.geocode}
                         </div>
-                        <span className="text-sm text-on-surface-variant">{property.address}</span>
+                        <span className="text-sm text-on-surface-variant">
+                          {property.address}
+                        </span>
                         {markerFormats[property.geocode]?.note && (
                           <div className="mt-2 p-2 bg-gray-800 border border-gray-600 rounded text-sm">
                             <strong className="text-white">Note:</strong>{" "}
-                            <span className="text-gray-200">{markerFormats[property.geocode].note}</span>
+                            <span className="text-gray-200">
+                              {markerFormats[property.geocode].note}
+                            </span>
                           </div>
                         )}
 
@@ -1602,11 +1742,15 @@ export const PropertyMap = memo(function PropertyMap({
                         <div className="text-sm font-medium mb-1">
                           {property.geocode}
                         </div>
-                        <span className="text-sm text-on-surface-variant">{property.address}</span>
+                        <span className="text-sm text-on-surface-variant">
+                          {property.address}
+                        </span>
                         {markerFormats[property.geocode]?.note && (
                           <div className="mt-2 p-2 bg-gray-800 border border-gray-600 rounded text-sm">
                             <strong className="text-white">Note:</strong>{" "}
-                            <span className="text-gray-200">{markerFormats[property.geocode].note}</span>
+                            <span className="text-gray-200">
+                              {markerFormats[property.geocode].note}
+                            </span>
                           </div>
                         )}
 
@@ -1667,16 +1811,18 @@ export const PropertyMap = memo(function PropertyMap({
       <ZoomControls mapRef={mapRef} />
 
       {/* Group Toolbar for batch formatting */}
-      {isGroupToolbarOpen && selectedPropertyGeocodes.length > 0 && onCloseGroupToolbar && (
-        <GroupToolbar
-          selectedGeocodes={selectedPropertyGeocodes}
-          markerFormats={markerFormats}
-          onBatchFormatChange={handleBatchFormatChange}
-          onCreateGroupLabel={handleCreateLabel}
-          properties={properties}
-          onClose={onCloseGroupToolbar}
-        />
-      )}
+      {isGroupToolbarOpen &&
+        selectedPropertyGeocodes.length > 0 &&
+        onCloseGroupToolbar && (
+          <GroupToolbar
+            selectedGeocodes={selectedPropertyGeocodes}
+            markerFormats={markerFormats}
+            onBatchFormatChange={handleBatchFormatChange}
+            onCreateGroupLabel={handleCreateLabel}
+            properties={properties}
+            onClose={onCloseGroupToolbar}
+          />
+        )}
     </div>
   );
 });
