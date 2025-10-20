@@ -6,13 +6,14 @@ This is a full-stack web application that allows users to look up Montana proper
 
 ## Recent Changes (October 20, 2025)
 - **Point Formatting Toolbar**: Added interactive marker customization with icon picker, color picker, and label editor in marker popups
-- **Custom Marker Icons**: Implemented 6 icon shapes (default circle, home, building, flag, star, heart) using CSS clip-path rendering
+- **Lucide Icon Integration**: Replaced CSS-based icon shapes with actual Lucide React icon components (Home, Building, Flag, Star, Heart, MapPin) for crisp vector rendering
 - **Custom Marker Colors**: Added 8-color palette (blue, red, green, orange, purple, pink, teal, yellow) for marker customization
 - **Custom Marker Labels**: Text input field allows users to add custom labels to markers that persist in popups
-- **LocalStorage Persistence**: All marker formatting (icon/color/label) persists across map size toggles and page reloads
+- **LocalStorage Persistence**: All marker formatting (icon/color/label) persists across map size toggles and page reloads using stable geocode keys
 - **Real-time Updates**: Marker appearance updates immediately when selecting icons/colors or typing labels
 - **Improved Label Editor UX**: Label input uses draft state with save-on-blur/Enter to prevent popup closing while typing
 - **Frontend-only Implementation**: No backend changes required, all formatting stored in browser localStorage
+- **SVG Icon Rendering**: Uses ReactDOMServer.renderToString() to convert Lucide icon components to SVG strings for Leaflet divIcon integration
 
 ## Previous Changes (September 7, 2025)
 - **Multi-Property Map Enhancement**: Extended PropertyMap component to display multiple properties simultaneously with different colored markers and polygons
