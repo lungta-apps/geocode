@@ -277,8 +277,9 @@ export default function Home() {
   const handleToggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     if (isSelectionMode) {
-      // Clear selection when exiting selection mode
+      // Clear both group selection and individual selection when exiting selection mode
       setSelectedPropertyGeocodes([]);
+      setSelectedGeocode(null);
     }
   };
   
@@ -491,6 +492,7 @@ export default function Home() {
                           onDeleteProperty={handleDeleteProperty}
                           isGroupToolbarOpen={isGroupToolbarOpen}
                           onCloseGroupToolbar={() => setIsGroupToolbarOpen(false)}
+                          onMarkerClick={handlePropertySelect}
                         />
                       </div>
                     )}
@@ -779,6 +781,7 @@ export default function Home() {
                     onDeleteProperty={handleDeleteProperty}
                     isGroupToolbarOpen={isGroupToolbarOpen}
                     onCloseGroupToolbar={() => setIsGroupToolbarOpen(false)}
+                    onMarkerClick={handlePropertySelect}
                   />
                 </div>
               </div>

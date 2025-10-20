@@ -100,6 +100,7 @@ interface PropertyMapProps {
   onDeleteProperty?: (geocode: string) => void;
   isGroupToolbarOpen?: boolean;
   onCloseGroupToolbar?: () => void;
+  onMarkerClick?: (geocode: string) => void;
 }
 
 interface PropertyWithColor {
@@ -146,7 +147,7 @@ interface MapLabel {
 
 // Available icon options
 const ICON_OPTIONS = [
-  { id: "default", name: "Default", icon: MapPin },
+  { id: "default", name: "Default", icon: Circle },
   { id: "home", name: "Home", icon: Home },
   { id: "building", name: "Building", icon: Building },
   { id: "flag", name: "Flag", icon: Flag },
@@ -393,7 +394,9 @@ function GroupToolbar({
   >(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const toolbarStartPos = useRef<{ x: number; y: number } | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -420,7 +423,7 @@ function GroupToolbar({
     }
 
     // Calculate initial center position over map container
-    const mapContainer = document.querySelector('.leaflet-container');
+    const mapContainer = document.querySelector(".leaflet-container");
     if (mapContainer) {
       const rect = mapContainer.getBoundingClientRect();
       const toolbarWidth = 288; // w-72 = 18rem = 288px
@@ -521,7 +524,8 @@ function GroupToolbar({
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging || !dragStartPos.current || !toolbarStartPos.current) return;
+    if (!isDragging || !dragStartPos.current || !toolbarStartPos.current)
+      return;
 
     const dx = e.clientX - dragStartPos.current.x;
     const dy = e.clientY - dragStartPos.current.y;
@@ -1313,6 +1317,7 @@ export const PropertyMap = memo(function PropertyMap({
   onDeleteProperty,
   isGroupToolbarOpen = false,
   onCloseGroupToolbar,
+  onMarkerClick,
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
 
@@ -1449,7 +1454,7 @@ export const PropertyMap = memo(function PropertyMap({
       case "heart":
         return Heart;
       default:
-        return MapPin; // Default to MapPin
+        return Circle; // Default to Circle
     }
   };
 
@@ -1462,7 +1467,7 @@ export const PropertyMap = memo(function PropertyMap({
     isDimmed: boolean,
   ) => {
     const format = markerFormats[geocode] || {};
-    const markerColor = format.color || baseColor;
+    const markerColor = isSelected ? SELECTED_COLOR : format.color || baseColor;
     const opacity = isDimmed ? UNSELECTED_OPACITY : 1;
 
     // Get the appropriate Lucide icon component
@@ -1484,7 +1489,7 @@ export const PropertyMap = memo(function PropertyMap({
     );
 
     // Add pulse animation for selected markers
-    const animationClass = isSelected ? "marker-pulse" : "";
+    const animationClass = "";
 
     return L.divIcon({
       className: `custom-marker-${geocode} ${animationClass}`,
@@ -1600,7 +1605,7 @@ export const PropertyMap = memo(function PropertyMap({
               fillOpacity = 0.2;
             } else if (isInSelectionGroup) {
               // Property is in the current selection group
-              polygonColor = customColor || "#4CAF50"; // Green for group selection
+              polygonColor = SELECTED_COLOR;
               weight = 3;
               fillOpacity = 0.15;
             } else if (shouldBeDimmed || shouldBeDimmedBySelection) {
@@ -1619,8 +1624,8 @@ export const PropertyMap = memo(function PropertyMap({
               iconBaseColor = SELECTED_COLOR;
               markerIcon = createCustomIcon(
                 property.geocode,
-                iconBaseColor,
-                iconSize,
+                SELECTED_COLOR,
+                20,
                 true,
                 false,
               );
@@ -1631,7 +1636,7 @@ export const PropertyMap = memo(function PropertyMap({
                 property.geocode,
                 iconBaseColor,
                 iconSize,
-                false,
+                true,
                 false,
               );
             } else if (shouldBeDimmed || shouldBeDimmedBySelection) {
@@ -1733,6 +1738,13 @@ export const PropertyMap = memo(function PropertyMap({
                   <Marker
                     position={[property.lat, property.lng]}
                     icon={markerIcon}
+                    eventHandlers={{
+                      click: () => {
+                        if (onMarkerClick) {
+                          onMarkerClick(property.geocode);
+                        }
+                      },
+                    }}
                   >
                     <Popup className="dark-popup">
                       <div className="text-on-surface font-sans">
