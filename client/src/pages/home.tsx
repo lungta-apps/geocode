@@ -290,10 +290,6 @@ export default function Home() {
     }
   };
   
-  const handleClearSelection = () => {
-    setSelectedPropertyGeocodes([]);
-    showToast('Selection cleared - showing all properties', 'info');
-  };
 
   const handleDeleteProperty = (geocode: string) => {
     // Remove property from master collection
@@ -457,16 +453,6 @@ export default function Home() {
                                   data-testid="button-edit-group"
                                 >
                                   <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  onClick={handleClearSelection}
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-red-600 hover:bg-red-700 text-red-300 hover:text-white"
-                                  title="Clear current selection"
-                                  data-testid="button-clear-selection"
-                                >
-                                  <X className="h-4 w-4" />
                                 </Button>
                                 <Badge variant="secondary" className="bg-green-800 text-green-100">
                                   {selectedPropertyGeocodes.length} Selected
@@ -758,16 +744,6 @@ export default function Home() {
                             data-testid="button-edit-group-expanded"
                           >
                             <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            onClick={handleClearSelection}
-                            variant="outline"
-                            size="sm"
-                            className="border-red-600 hover:bg-red-700 text-red-300 hover:text-white"
-                            title="Clear current selection"
-                            data-testid="button-clear-selection-expanded"
-                          >
-                            <X className="h-4 w-4" />
                           </Button>
                           <Badge variant="secondary" className="bg-green-800 text-green-100">
                             {selectedPropertyGeocodes.length} Selected
