@@ -496,6 +496,8 @@ export default function Home() {
                           onPropertySelection={handlePropertySelection}
                           selectedPropertyGeocodes={selectedPropertyGeocodes}
                           onDeleteProperty={handleDeleteProperty}
+                          isGroupToolbarOpen={isGroupToolbarOpen}
+                          onCloseGroupToolbar={() => setIsGroupToolbarOpen(false)}
                         />
                       </div>
                     )}
@@ -792,6 +794,8 @@ export default function Home() {
                     onPropertySelection={handlePropertySelection}
                     selectedPropertyGeocodes={selectedPropertyGeocodes}
                     onDeleteProperty={handleDeleteProperty}
+                    isGroupToolbarOpen={isGroupToolbarOpen}
+                    onCloseGroupToolbar={() => setIsGroupToolbarOpen(false)}
                   />
                 </div>
               </div>

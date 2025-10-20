@@ -21,6 +21,14 @@ This is a full-stack web application that allows users to look up Montana proper
 - **Label Editing and Deletion**: Double-click labels to edit text, Enter/Esc to save/cancel, hover to show delete button
 - **Label Persistence**: All labels stored in localStorage and persist across map size toggles and page reloads
 - **Event Handling**: Drag operations use stopPropagation to prevent map panning, delete button prevents accidental drags
+- **Batch Formatting Feature**: Added group edit functionality for formatting multiple selected markers simultaneously
+- **Group Toolbar**: Edit (pencil) button appears when markers are selected, opening a floating toolbar with icon/color/note pickers
+- **Batch Icon/Color Application**: Apply same icon or color to all selected markers with one click
+- **Batch Note Editor**: Textarea allows setting identical notes across all selected markers with Apply/Cancel buttons
+- **Group Label Creation**: Create Label button generates one draggable label at the centroid (average lat/lng) of selected markers
+- **Unified State Management**: Batch operations use the same markerFormats state and localStorage persistence as single-marker edits
+- **Keyboard Support**: ESC key closes the group toolbar, Enter (without Shift) saves batch notes
+- **Selection Count Display**: Group toolbar header shows "N Selected" badge for clarity
 - **Frontend-only Implementation**: No backend changes required, all formatting and labels stored in browser localStorage
 - **SVG Icon Rendering**: Uses ReactDOMServer.renderToString() to convert Lucide icon components to SVG strings for Leaflet divIcon integration
 
