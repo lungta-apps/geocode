@@ -26,7 +26,7 @@ interface MasterPropertyCollection {
   totalCount: number;
   lastUpdated: string;
 }
-import { AlertCircle, RotateCcw, HelpCircle, CheckCircle, XCircle, Download, RefreshCw, Loader2, Maximize2, X, Circle } from "lucide-react";
+import { AlertCircle, RotateCcw, HelpCircle, CheckCircle, XCircle, Download, RefreshCw, Loader2, Maximize2, X, Circle, Edit2 } from "lucide-react";
 import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -63,6 +63,7 @@ export default function Home() {
   // Selection state for property grouping feature
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedPropertyGeocodes, setSelectedPropertyGeocodes] = useState<string[]>([]);
+  const [isGroupToolbarOpen, setIsGroupToolbarOpen] = useState(false);
 
   // Helper functions for master property collection
   const addToMasterCollection = (properties: PropertyInfo[], source: PropertyCollectionItem['source']) => {
@@ -438,6 +439,19 @@ export default function Home() {
                             {selectedPropertyGeocodes.length > 0 && (
                               <>
                                 <Button
+                                  onClick={() => setIsGroupToolbarOpen(!isGroupToolbarOpen)}
+                                  variant={isGroupToolbarOpen ? "default" : "outline"}
+                                  size="sm"
+                                  className={isGroupToolbarOpen ?
+                                    "bg-blue-600 hover:bg-blue-700 text-white" :
+                                    "border-blue-600 hover:bg-blue-700 text-blue-300 hover:text-white"
+                                  }
+                                  title="Format selected properties"
+                                  data-testid="button-edit-group"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
                                   onClick={handleClearSelection}
                                   variant="outline"
                                   size="sm"
@@ -723,6 +737,19 @@ export default function Home() {
                       
                       {selectedPropertyGeocodes.length > 0 && (
                         <>
+                          <Button
+                            onClick={() => setIsGroupToolbarOpen(!isGroupToolbarOpen)}
+                            variant={isGroupToolbarOpen ? "default" : "outline"}
+                            size="sm"
+                            className={isGroupToolbarOpen ?
+                              "bg-blue-600 hover:bg-blue-700 text-white" :
+                              "border-blue-600 hover:bg-blue-700 text-blue-300 hover:text-white"
+                            }
+                            title="Format selected properties"
+                            data-testid="button-edit-group-expanded"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
                           <Button
                             onClick={handleClearSelection}
                             variant="outline"
