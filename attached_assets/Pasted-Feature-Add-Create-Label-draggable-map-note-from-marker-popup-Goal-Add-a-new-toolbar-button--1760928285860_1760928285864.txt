@@ -1,0 +1,50 @@
+Feature: Add “Create Label” (draggable map note) from marker popup
+
+Goal
+- Add a new toolbar button on the marker popup: **Create Label**.
+- When clicked, create a text label on the map near the selected marker.
+- The label is **draggable** (user can move it on the map) and **persistent** across collapsed/expanded map states and page reloads.
+- This is UI/front-end only. No backend/package.json changes.
+
+Implementation details
+- Add a new button to the popup toolbar alongside Icon / Color / Note: **Create Label**.
+- On click:
+  - Insert a new label object into a central store (reuse the project’s existing state/store pattern—same as markers).
+  - Shape:
+    ```
+    {
+      id: string,          // unique id
+      text: string,        // default: "" (focus input immediately)
+      lat: number,
+      lng: number,
+      color?: string,      // optional; default same as current theme foreground
+      size?: "sm"|"md"|"lg" // optional
+    }
+    ```
+  - Initial position = marker’s current coordinates (lat/lng).
+  - Immediately render an input for the new label’s text (auto-focus). Placeholder: "Enter label..."
+  - Save text on Enter and on blur. Keep the label visible as text after editing.
+- Render:
+  - Add a dedicated “labels layer” on top of the map (same component that renders markers).
+  - Each label is an absolutely-positioned map overlay (using the map lib’s projection util already used for markers).
+  - Draggable: user can drag the label; update its lat/lng as it moves.
+  - Click or double-click on a label re-enters edit mode (to change text).
+  - Provide a small “×” delete control on hover/focus to remove a label.
+  - Ensure pointer events for dragging/editing don’t pan the map (use stopPropagation where needed).
+- Persistence:
+  - Store labels in the same central store as markers or a parallel `labels` collection.
+  - Persist to `localStorage` on change and rehydrate on load.
+  - When the map toggles collapsed/expanded (component remount), labels are restored and reprojected correctly.
+- Accessibility/UX:
+  - Keyboard: Enter to save, Esc to cancel edit (revert draft).
+  - Focus ring on the editable input; aria-labels for “Create Label”, “Edit label”, “Delete label”.
+- Styling:
+  - Match dark theme: readable contrast, subtle shadow, small rounded chip for text.
+  - z-index above markers so labels remain visible.
+- Do not modify backend API or `package.json` scripts. Use ESM and existing conventions.
+
+Deliverables
+- Updated popup toolbar with **Create Label**.
+- New label overlay system (render, edit, drag, delete).
+- Labels persist across map toggle and reload (localStorage).
+- Short summary of changed files and how to add/edit/move/delete a label.

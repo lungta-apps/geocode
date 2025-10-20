@@ -129,6 +129,16 @@ interface MarkerFormat {
   note?: string;
 }
 
+// Map label interface for draggable text annotations
+interface MapLabel {
+  id: string;
+  text: string;
+  lat: number;
+  lng: number;
+  color?: string;
+  size?: "sm" | "md" | "lg";
+}
+
 // Available icon options
 const ICON_OPTIONS = [
   { id: "default", name: "Default", icon: MapPin },
@@ -345,12 +355,18 @@ interface FormattingToolbarProps {
   geocode: string;
   currentFormat: MarkerFormat;
   onFormatChange: (geocode: string, format: MarkerFormat) => void;
+  lat: number;
+  lng: number;
+  onCreateLabel?: (lat: number, lng: number) => void;
 }
 
 function FormattingToolbar({
   geocode,
   currentFormat,
   onFormatChange,
+  lat,
+  lng,
+  onCreateLabel,
 }: FormattingToolbarProps) {
   const [activePanel, setActivePanel] = useState<
     "icon" | "color" | "note" | null
@@ -424,6 +440,25 @@ function FormattingToolbar({
           Note
         </Button>
       </div>
+
+      {/* Create Label Button */}
+      {onCreateLabel && (
+        <div className="mt-2">
+          <Button
+            onClick={() => {
+              onCreateLabel(lat, lng);
+              setActivePanel(null);
+            }}
+            variant="secondary"
+            size="sm"
+            className="w-full text-xs"
+            data-testid={`button-create-label-${geocode}`}
+          >
+            <Tag className="h-3 w-3 mr-1" />
+            Create Label
+          </Button>
+        </div>
+      )}
 
       {/* Icon Picker Panel */}
       {activePanel === "icon" && (
@@ -501,6 +536,213 @@ function FormattingToolbar({
         </div>
       )}
     </div>
+  );
+}
+
+// Draggable Label Component for Map Annotations
+interface DraggableLabelProps {
+  label: MapLabel;
+  onUpdate: (id: string, updates: Partial<MapLabel>) => void;
+  onDelete: (id: string) => void;
+}
+
+function DraggableLabel({ label, onUpdate, onDelete }: DraggableLabelProps) {
+  const map = useMap();
+  const [isEditing, setIsEditing] = useState(label.text === "");
+  const [textDraft, setTextDraft] = useState(label.text);
+  const [position, setPosition] = useState<L.Point | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const labelStartLatLng = useRef<{ lat: number; lng: number } | null>(null);
+
+  // Convert lat/lng to pixel position for rendering
+  useEffect(() => {
+    if (!map) return;
+
+    const updatePosition = () => {
+      const point = map.latLngToContainerPoint([label.lat, label.lng]);
+      setPosition(point);
+    };
+
+    updatePosition();
+    map.on("move", updatePosition);
+    map.on("zoom", updatePosition);
+
+    return () => {
+      map.off("move", updatePosition);
+      map.off("zoom", updatePosition);
+    };
+  }, [map, label.lat, label.lng]);
+
+  // Auto-focus input when entering edit mode
+  useEffect(() => {
+    if (isEditing) {
+      setTextDraft(label.text);
+    }
+  }, [isEditing, label.text]);
+
+  const handleSave = () => {
+    if (textDraft.trim()) {
+      onUpdate(label.id, { text: textDraft.trim() });
+      setIsEditing(false);
+    } else {
+      // Delete empty labels
+      onDelete(label.id);
+    }
+  };
+
+  const handleCancel = () => {
+    if (label.text === "") {
+      // Delete if it was never saved
+      onDelete(label.id);
+    } else {
+      setTextDraft(label.text);
+      setIsEditing(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
+
+  // Custom drag handling
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isEditing) return;
+    
+    e.stopPropagation();
+    e.preventDefault();
+    
+    setIsDragging(true);
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+    labelStartLatLng.current = { lat: label.lat, lng: label.lng };
+  };
+
+  useEffect(() => {
+    if (!isDragging || !map) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStartPos.current || !labelStartLatLng.current) return;
+
+      const deltaX = e.clientX - dragStartPos.current.x;
+      const deltaY = e.clientY - dragStartPos.current.y;
+
+      // Convert original lat/lng to container point
+      const startPoint = map.latLngToContainerPoint([
+        labelStartLatLng.current.lat,
+        labelStartLatLng.current.lng,
+      ]);
+
+      // Add delta to get new container point
+      const newPoint = new L.Point(startPoint.x + deltaX, startPoint.y + deltaY);
+
+      // Convert back to lat/lng
+      const newLatLng = map.containerPointToLatLng(newPoint);
+
+      // Update label position
+      onUpdate(label.id, { lat: newLatLng.lat, lng: newLatLng.lng });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      dragStartPos.current = null;
+      labelStartLatLng.current = null;
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, map, label.id, onUpdate]);
+
+  if (!position) return null;
+
+  const sizeClasses = {
+    sm: "text-xs px-2 py-1",
+    md: "text-sm px-3 py-1.5",
+    lg: "text-base px-4 py-2",
+  };
+
+  const sizeClass = sizeClasses[label.size || "md"];
+  const color = label.color || "#ffffff";
+
+  return (
+    <>
+      {/* Visual label overlay - absolutely positioned and draggable */}
+      <div
+        style={{
+          position: "absolute",
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          transform: "translate(-50%, -50%)",
+          zIndex: 1000,
+          pointerEvents: "auto",
+        }}
+        className="label-overlay-container"
+        data-testid={`map-label-${label.id}`}
+      >
+        {isEditing ? (
+          <div
+            className={`flex items-center gap-1 bg-gray-900 border border-gray-600 rounded shadow-lg ${sizeClass}`}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Input
+              type="text"
+              value={textDraft}
+              onChange={(e) => setTextDraft(e.target.value)}
+              onBlur={handleSave}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter label..."
+              className="text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:ring-primary focus:border-primary min-w-[120px]"
+              data-testid={`input-label-text-${label.id}`}
+              autoFocus
+            />
+          </div>
+        ) : (
+          <div
+            className={`group relative flex items-center gap-1 rounded shadow-lg ${isDragging ? "cursor-grabbing" : "cursor-grab"} ${sizeClass} bg-gray-900 border border-gray-600 select-none`}
+            style={{ color }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (e.detail === 2 && !isDragging) {
+                // Double-click to edit
+                setIsEditing(true);
+              }
+            }}
+            onMouseDown={handleMouseDown}
+            data-testid={`label-display-${label.id}`}
+          >
+            <span className="font-medium" style={{ color }}>
+              {label.text}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onDelete(label.id);
+              }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 text-gray-400 hover:text-red-400"
+              aria-label="Delete label"
+              data-testid={`button-delete-label-${label.id}`}
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -622,6 +864,7 @@ function BasemapControls({
 
 // LocalStorage key for marker formats
 const MARKER_FORMATS_STORAGE_KEY = "map-marker-formats";
+const MAP_LABELS_STORAGE_KEY = "map-labels";
 
 // Helper to load marker formats from localStorage
 const loadMarkerFormatsFromStorage = (): Record<string, MarkerFormat> => {
@@ -649,6 +892,32 @@ const saveMarkerFormatsToStorage = (formats: Record<string, MarkerFormat>) => {
   }
 };
 
+// Helper to load labels from localStorage
+const loadLabelsFromStorage = (): MapLabel[] => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const saved = localStorage.getItem(MAP_LABELS_STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.error("Failed to load map labels from localStorage:", error);
+  }
+  return [];
+};
+
+// Helper to save labels to localStorage
+const saveLabelsToStorage = (labels: MapLabel[]) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(MAP_LABELS_STORAGE_KEY, JSON.stringify(labels));
+  } catch (error) {
+    console.error("Failed to save map labels to localStorage:", error);
+  }
+};
+
 export const PropertyMap = memo(function PropertyMap({
   properties,
   selectedGeocode,
@@ -672,6 +941,16 @@ export const PropertyMap = memo(function PropertyMap({
     saveMarkerFormatsToStorage(markerFormats);
   }, [markerFormats]);
 
+  // Map labels state - stores draggable text annotations
+  const [mapLabels, setMapLabels] = useState<MapLabel[]>(() => {
+    return loadLabelsFromStorage();
+  });
+
+  // Persist labels to localStorage whenever they change
+  useEffect(() => {
+    saveLabelsToStorage(mapLabels);
+  }, [mapLabels]);
+
   // Basemap state management with localStorage persistence
   const [selectedBasemap, setSelectedBasemap] = useState<string>(() => {
     if (typeof window !== "undefined") {
@@ -694,6 +973,32 @@ export const PropertyMap = memo(function PropertyMap({
       saveMarkerFormatsToStorage(updated);
       return updated;
     });
+  };
+
+  // Handler to create a new label
+  const handleCreateLabel = (lat: number, lng: number) => {
+    const newLabel: MapLabel = {
+      id: `label-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: "",
+      lat,
+      lng,
+      size: "md",
+    };
+    setMapLabels((prev) => [...prev, newLabel]);
+  };
+
+  // Handler to update a label
+  const handleUpdateLabel = (id: string, updates: Partial<MapLabel>) => {
+    setMapLabels((prev) =>
+      prev.map((label) =>
+        label.id === id ? { ...label, ...updates } : label
+      )
+    );
+  };
+
+  // Handler to delete a label
+  const handleDeleteLabel = (id: string) => {
+    setMapLabels((prev) => prev.filter((label) => label.id !== id));
   };
 
   // Persist basemap selection to localStorage
@@ -988,6 +1293,9 @@ export const PropertyMap = memo(function PropertyMap({
                           geocode={property.geocode}
                           currentFormat={markerFormats[property.geocode] || {}}
                           onFormatChange={handleFormatChange}
+                          lat={property.lat || 0}
+                          lng={property.lng || 0}
+                          onCreateLabel={handleCreateLabel}
                         />
 
                         {onDeleteProperty && (
@@ -1039,6 +1347,9 @@ export const PropertyMap = memo(function PropertyMap({
                           geocode={property.geocode}
                           currentFormat={markerFormats[property.geocode] || {}}
                           onFormatChange={handleFormatChange}
+                          lat={property.lat || 0}
+                          lng={property.lng || 0}
+                          onCreateLabel={handleCreateLabel}
                         />
 
                         {onDeleteProperty && (
@@ -1063,6 +1374,16 @@ export const PropertyMap = memo(function PropertyMap({
               </div>
             );
           })}
+
+          {/* Render map labels */}
+          {mapLabels.map((label) => (
+            <DraggableLabel
+              key={label.id}
+              label={label}
+              onUpdate={handleUpdateLabel}
+              onDelete={handleDeleteLabel}
+            />
+          ))}
 
           <MapController properties={propertiesWithColors} />
         </MapContainer>

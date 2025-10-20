@@ -16,7 +16,12 @@ This is a full-stack web application that allows users to look up Montana proper
 - **Enhanced Toolbar Panels**: Icon/color/note picker panels use dark backgrounds (gray-800) with improved visibility and focus states
 - **Accessible Inputs**: Note input field styled with dark background, white text, gray placeholder, and primary focus ring for clear visibility
 - **Consistent Terminology**: Updated from "Label" to "Note" throughout UI for clarity (toolbar button, input placeholder, display text, variable names, data-testid attributes)
-- **Frontend-only Implementation**: No backend changes required, all formatting stored in browser localStorage
+- **Draggable Map Labels**: Added "Create Label" button in marker popups to create draggable text annotations on the map
+- **Custom Pointer-Based Dragging**: Labels use custom mousedown/mousemove/mouseup events for smooth dragging with real-time lat/lng updates
+- **Label Editing and Deletion**: Double-click labels to edit text, Enter/Esc to save/cancel, hover to show delete button
+- **Label Persistence**: All labels stored in localStorage and persist across map size toggles and page reloads
+- **Event Handling**: Drag operations use stopPropagation to prevent map panning, delete button prevents accidental drags
+- **Frontend-only Implementation**: No backend changes required, all formatting and labels stored in browser localStorage
 - **SVG Icon Rendering**: Uses ReactDOMServer.renderToString() to convert Lucide icon components to SVG strings for Leaflet divIcon integration
 
 ## Previous Changes (September 7, 2025)
