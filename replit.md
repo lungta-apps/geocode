@@ -16,7 +16,9 @@ This full-stack web application allows users to look up Montana property informa
 - **Batch Note Editor**: Textarea with Apply/Cancel buttons to set identical notes across selected markers
 - **Group Label Creation**: Creates one draggable label at centroid (average lat/lng) of all selected markers
 - **Unified State**: Batch operations use same markerFormats state and localStorage as single-marker edits
-- **Keyboard Support**: ESC closes toolbar, Enter (without Shift) saves batch notes
+- **Keyboard Support**: ESC closes toolbar (selection preserved), Enter (without Shift) saves batch notes
+- **Close Behavior**: Toolbar closes via "Exit Selection" button or ESC key; selection remains active until explicitly cleared
+- **Auto-Close Guard**: Toolbar automatically closes when selection count reaches zero
 - **Accessibility**: Header has cursor-grab/grabbing feedback and aria-grabbed attribute during drag
 - **Portal Rendering**: Uses React createPortal to render at end of <body> for proper z-index layering above map controls
 

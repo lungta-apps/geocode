@@ -1,4 +1,4 @@
-import { Edit2, X } from "lucide-react";
+import { Edit2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useRef, useMemo, memo, useState } from "react";
 import { renderToString } from "react-dom/server";
@@ -572,27 +572,17 @@ function GroupToolbar({
     >
       {/* Header - Drag Handle */}
       <div
-        className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700 cursor-grab active:cursor-grabbing"
+        className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-700 cursor-grab active:cursor-grabbing"
         aria-grabbed={isDragging}
       >
-        <div className="flex items-center gap-2">
-          <Edit2 className="h-4 w-4 text-blue-400" />
-          <span className="text-sm font-semibold text-white">Group Format</span>
-          <Badge
-            variant="secondary"
-            className="bg-green-800 text-green-100 text-xs"
-          >
-            {selectedGeocodes.length} Selected
-          </Badge>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-white transition-colors"
-          aria-label="Close group toolbar"
-          data-testid="button-close-group-toolbar"
+        <Edit2 className="h-4 w-4 text-blue-400" />
+        <span className="text-sm font-semibold text-white">Group Format</span>
+        <Badge
+          variant="secondary"
+          className="bg-green-800 text-green-100 text-xs"
         >
-          <X className="h-4 w-4" />
-        </button>
+          {selectedGeocodes.length} Selected
+        </Badge>
       </div>
 
       {/* Toolbar Buttons */}
