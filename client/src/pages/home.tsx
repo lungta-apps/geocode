@@ -65,6 +65,13 @@ export default function Home() {
   const [selectedPropertyGeocodes, setSelectedPropertyGeocodes] = useState<string[]>([]);
   const [isGroupToolbarOpen, setIsGroupToolbarOpen] = useState(false);
 
+  // Auto-close Group Toolbar when selection becomes empty
+  useEffect(() => {
+    if (selectedPropertyGeocodes.length === 0 && isGroupToolbarOpen) {
+      setIsGroupToolbarOpen(false);
+    }
+  }, [selectedPropertyGeocodes.length, isGroupToolbarOpen]);
+
   // Helper functions for master property collection
   const addToMasterCollection = (properties: PropertyInfo[], source: PropertyCollectionItem['source']) => {
     const newItems: PropertyCollectionItem[] = properties.map(property => ({
