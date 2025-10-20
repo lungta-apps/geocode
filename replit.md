@@ -4,7 +4,17 @@
 
 This is a full-stack web application that allows users to look up Montana property information using geocodes. Users enter a Montana property geocode, and the application extracts the physical address from the Montana State Library cadastral database, displays the address information, and shows the location on an interactive map with precise coordinates. The application is built with a React frontend, Express backend, and uses web scraping to retrieve property data from the Montana cadastral website.
 
-## Recent Changes (September 7, 2025)
+## Recent Changes (October 20, 2025)
+- **Point Formatting Toolbar**: Added interactive marker customization with icon picker, color picker, and label editor in marker popups
+- **Custom Marker Icons**: Implemented 6 icon shapes (default circle, home, building, flag, star, heart) using CSS clip-path rendering
+- **Custom Marker Colors**: Added 8-color palette (blue, red, green, orange, purple, pink, teal, yellow) for marker customization
+- **Custom Marker Labels**: Text input field allows users to add custom labels to markers that persist in popups
+- **LocalStorage Persistence**: All marker formatting (icon/color/label) persists across map size toggles and page reloads
+- **Real-time Updates**: Marker appearance updates immediately when selecting icons/colors or typing labels
+- **Improved Label Editor UX**: Label input uses draft state with save-on-blur/Enter to prevent popup closing while typing
+- **Frontend-only Implementation**: No backend changes required, all formatting stored in browser localStorage
+
+## Previous Changes (September 7, 2025)
 - **Multi-Property Map Enhancement**: Extended PropertyMap component to display multiple properties simultaneously with different colored markers and polygons
 - **Dynamic Color Coding**: Implemented 12-color palette system that automatically assigns unique colors to each property for easy identification
 - **Enhanced Interactive Legend**: Updated map legend to show individual property information with geocodes, addresses, and color-coded indicators

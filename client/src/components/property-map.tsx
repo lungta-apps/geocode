@@ -568,6 +568,35 @@ function BasemapControls({
   );
 }
 
+// LocalStorage key for marker formats
+const MARKER_FORMATS_STORAGE_KEY = 'map-marker-formats';
+
+// Helper to load marker formats from localStorage
+const loadMarkerFormatsFromStorage = (): Record<string, MarkerFormat> => {
+  if (typeof window === 'undefined') return {};
+  
+  try {
+    const saved = localStorage.getItem(MARKER_FORMATS_STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (error) {
+    console.error('Failed to load marker formats from localStorage:', error);
+  }
+  return {};
+};
+
+// Helper to save marker formats to localStorage
+const saveMarkerFormatsToStorage = (formats: Record<string, MarkerFormat>) => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(MARKER_FORMATS_STORAGE_KEY, JSON.stringify(formats));
+  } catch (error) {
+    console.error('Failed to save marker formats to localStorage:', error);
+  }
+};
+
 export const PropertyMap = memo(function PropertyMap({ 
   properties, 
   selectedGeocode,
@@ -579,7 +608,15 @@ export const PropertyMap = memo(function PropertyMap({
   const mapRef = useRef<L.Map | null>(null);
   
   // Marker formatting state - stores custom icon, color, and label per geocode
-  const [markerFormats, setMarkerFormats] = useState<Record<string, MarkerFormat>>({});
+  // Initialize from localStorage to persist across map size toggles and page reloads
+  const [markerFormats, setMarkerFormats] = useState<Record<string, MarkerFormat>>(() => {
+    return loadMarkerFormatsFromStorage();
+  });
+  
+  // Persist marker formats to localStorage whenever they change
+  useEffect(() => {
+    saveMarkerFormatsToStorage(markerFormats);
+  }, [markerFormats]);
   
   // Basemap state management with localStorage persistence
   const [selectedBasemap, setSelectedBasemap] = useState<string>(() => {
@@ -594,10 +631,15 @@ export const PropertyMap = memo(function PropertyMap({
 
   // Handler to update marker formatting
   const handleFormatChange = (geocode: string, format: MarkerFormat) => {
-    setMarkerFormats(prev => ({
-      ...prev,
-      [geocode]: format
-    }));
+    setMarkerFormats(prev => {
+      const updated = {
+        ...prev,
+        [geocode]: format
+      };
+      // Save to localStorage immediately for real-time persistence
+      saveMarkerFormatsToStorage(updated);
+      return updated;
+    });
   };
 
   // Persist basemap selection to localStorage
