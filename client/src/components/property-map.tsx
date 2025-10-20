@@ -95,6 +95,8 @@ interface PropertyMapProps {
   onPropertySelection?: (geocodes: string[]) => void;
   selectedPropertyGeocodes?: string[];
   onDeleteProperty?: (geocode: string) => void;
+  isGroupToolbarOpen?: boolean;
+  onCloseGroupToolbar?: () => void;
 }
 
 interface PropertyWithColor {
@@ -348,6 +350,251 @@ function isPointInPolygon(point: L.LatLng, polygon: L.LatLng[]): boolean {
   }
 
   return inside;
+}
+
+// Group Formatting Toolbar Component
+interface GroupToolbarProps {
+  selectedGeocodes: string[];
+  markerFormats: Record<string, MarkerFormat>;
+  onBatchFormatChange: (geocodes: string[], formatUpdates: Partial<MarkerFormat>) => void;
+  onCreateGroupLabel: (lat: number, lng: number) => void;
+  properties: PropertyInfo[];
+  onClose: () => void;
+}
+
+function GroupToolbar({
+  selectedGeocodes,
+  markerFormats,
+  onBatchFormatChange,
+  onCreateGroupLabel,
+  properties,
+  onClose,
+}: GroupToolbarProps) {
+  const [activePanel, setActivePanel] = useState<
+    "icon" | "color" | "note" | null
+  >(null);
+  const [noteDraft, setNoteDraft] = useState("");
+
+  // Calculate centroid of selected markers
+  const calculateCentroid = () => {
+    const selectedProperties = properties.filter((p) =>
+      selectedGeocodes.includes(p.geocode)
+    );
+    if (selectedProperties.length === 0) return { lat: 0, lng: 0 };
+
+    const avgLat =
+      selectedProperties.reduce((sum, p) => sum + (p.lat || 0), 0) /
+      selectedProperties.length;
+    const avgLng =
+      selectedProperties.reduce((sum, p) => sum + (p.lng || 0), 0) /
+      selectedProperties.length;
+
+    return { lat: avgLat, lng: avgLng };
+  };
+
+  const handleIconSelect = (iconId: string) => {
+    onBatchFormatChange(selectedGeocodes, { icon: iconId });
+    setActivePanel(null);
+  };
+
+  const handleColorSelect = (colorValue: string) => {
+    onBatchFormatChange(selectedGeocodes, { color: colorValue });
+    setActivePanel(null);
+  };
+
+  const saveNoteChange = () => {
+    if (noteDraft.trim()) {
+      onBatchFormatChange(selectedGeocodes, { note: noteDraft.trim() });
+      setNoteDraft("");
+      setActivePanel(null);
+    }
+  };
+
+  const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      saveNoteChange();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setNoteDraft("");
+      setActivePanel(null);
+    }
+  };
+
+  const handleCreateGroupLabel = () => {
+    const centroid = calculateCentroid();
+    onCreateGroupLabel(centroid.lat, centroid.lng);
+  };
+
+  const togglePanel = (panel: "icon" | "color" | "note") => {
+    setActivePanel(activePanel === panel ? null : panel);
+  };
+
+  // Close toolbar on Esc key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && activePanel === null) {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [activePanel, onClose]);
+
+  return (
+    <div className="fixed top-20 right-4 z-[1000] w-72 bg-gray-900 border border-gray-600 rounded-lg shadow-2xl p-3">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
+        <div className="flex items-center gap-2">
+          <Edit2 className="h-4 w-4 text-blue-400" />
+          <span className="text-sm font-semibold text-white">
+            Group Format
+          </span>
+          <Badge variant="secondary" className="bg-green-800 text-green-100 text-xs">
+            {selectedGeocodes.length} Selected
+          </Badge>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-white transition-colors"
+          aria-label="Close group toolbar"
+          data-testid="button-close-group-toolbar"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Toolbar Buttons */}
+      <div className="flex gap-1 mb-2">
+        <Button
+          onClick={() => togglePanel("icon")}
+          variant={activePanel === "icon" ? "default" : "outline"}
+          size="sm"
+          className="flex-1 text-xs"
+          data-testid="button-group-icon-picker"
+        >
+          <MapPin className="h-3 w-3 mr-1" />
+          Icon
+        </Button>
+        <Button
+          onClick={() => togglePanel("color")}
+          variant={activePanel === "color" ? "default" : "outline"}
+          size="sm"
+          className="flex-1 text-xs"
+          data-testid="button-group-color-picker"
+        >
+          <Palette className="h-3 w-3 mr-1" />
+          Color
+        </Button>
+        <Button
+          onClick={() => togglePanel("note")}
+          variant={activePanel === "note" ? "default" : "outline"}
+          size="sm"
+          className="flex-1 text-xs"
+          data-testid="button-group-note-editor"
+        >
+          <Tag className="h-3 w-3 mr-1" />
+          Note
+        </Button>
+      </div>
+
+      {/* Create Group Label Button */}
+      <div className="mb-2">
+        <Button
+          onClick={handleCreateGroupLabel}
+          variant="secondary"
+          size="sm"
+          className="w-full text-xs"
+          data-testid="button-create-group-label"
+        >
+          <Tag className="h-3 w-3 mr-1" />
+          Create Label
+        </Button>
+      </div>
+
+      {/* Icon Picker Panel */}
+      {activePanel === "icon" && (
+        <div
+          className="grid grid-cols-3 gap-1 p-2 bg-gray-800 rounded border border-gray-600 mb-2"
+          data-testid="panel-group-icon-picker"
+        >
+          {ICON_OPTIONS.map((iconOption) => {
+            const IconComponent = iconOption.icon;
+            return (
+              <button
+                key={iconOption.id}
+                onClick={() => handleIconSelect(iconOption.id)}
+                className="p-2 rounded border bg-gray-700 border-gray-600 hover:bg-gray-600 text-gray-200 text-center transition-colors"
+                data-testid={`group-icon-option-${iconOption.id}`}
+              >
+                <IconComponent className="h-4 w-4 mx-auto" />
+                <div className="text-xs mt-1">{iconOption.name}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Color Picker Panel */}
+      {activePanel === "color" && (
+        <div
+          className="flex gap-1 p-2 bg-gray-800 rounded flex-wrap border border-gray-600 mb-2"
+          data-testid="panel-group-color-picker"
+        >
+          {COLOR_OPTIONS.map((colorOption) => (
+            <button
+              key={colorOption.id}
+              onClick={() => handleColorSelect(colorOption.value)}
+              className="w-8 h-8 rounded-full border-2 border-gray-500 transition-transform hover:scale-110"
+              style={{ backgroundColor: colorOption.value }}
+              title={colorOption.name}
+              data-testid={`group-color-option-${colorOption.id}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Note Editor Panel */}
+      {activePanel === "note" && (
+        <div
+          className="p-2 bg-gray-800 rounded border border-gray-600"
+          data-testid="panel-group-note-editor"
+        >
+          <textarea
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            onKeyDown={handleNoteKeyDown}
+            placeholder="Enter note for all selected markers..."
+            className="w-full text-sm bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 focus:ring-primary focus:border-primary rounded px-2 py-1 min-h-[60px] resize-none"
+            data-testid="textarea-group-note"
+            autoFocus
+          />
+          <div className="flex gap-1 mt-2">
+            <Button
+              onClick={saveNoteChange}
+              size="sm"
+              className="flex-1 text-xs"
+              data-testid="button-apply-group-note"
+            >
+              Apply
+            </Button>
+            <Button
+              onClick={() => {
+                setNoteDraft("");
+                setActivePanel(null);
+              }}
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs"
+              data-testid="button-cancel-group-note"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Formatting Toolbar Component
@@ -925,6 +1172,8 @@ export const PropertyMap = memo(function PropertyMap({
   onPropertySelection,
   selectedPropertyGeocodes = [],
   onDeleteProperty,
+  isGroupToolbarOpen = false,
+  onCloseGroupToolbar,
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
 
@@ -969,6 +1218,25 @@ export const PropertyMap = memo(function PropertyMap({
         ...prev,
         [geocode]: format,
       };
+      // Save to localStorage immediately for real-time persistence
+      saveMarkerFormatsToStorage(updated);
+      return updated;
+    });
+  };
+
+  // Handler for batch formatting (group edit)
+  const handleBatchFormatChange = (
+    geocodes: string[],
+    formatUpdates: Partial<MarkerFormat>
+  ) => {
+    setMarkerFormats((prev) => {
+      const updated = { ...prev };
+      geocodes.forEach((geocode) => {
+        updated[geocode] = {
+          ...updated[geocode],
+          ...formatUpdates,
+        };
+      });
       // Save to localStorage immediately for real-time persistence
       saveMarkerFormatsToStorage(updated);
       return updated;
@@ -1397,6 +1665,18 @@ export const PropertyMap = memo(function PropertyMap({
 
       {/* Zoom controls positioned outside MapContainer for visibility */}
       <ZoomControls mapRef={mapRef} />
+
+      {/* Group Toolbar for batch formatting */}
+      {isGroupToolbarOpen && selectedPropertyGeocodes.length > 0 && onCloseGroupToolbar && (
+        <GroupToolbar
+          selectedGeocodes={selectedPropertyGeocodes}
+          markerFormats={markerFormats}
+          onBatchFormatChange={handleBatchFormatChange}
+          onCreateGroupLabel={handleCreateLabel}
+          properties={properties}
+          onClose={onCloseGroupToolbar}
+        />
+      )}
     </div>
   );
 });
