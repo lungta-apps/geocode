@@ -169,12 +169,24 @@
 }
 
 .leaflet-dark-theme .leaflet-popup-content-wrapper {
-  background-color: white;
-  color: #333;
+  background-color: var(--surface);
+  color: var(--on-surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
 }
 
 .leaflet-dark-theme .leaflet-popup-tip {
-  background-color: white;
+  background-color: var(--surface);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+.leaflet-dark-theme .leaflet-popup-close-button {
+  color: var(--on-surface-variant);
+}
+
+.leaflet-dark-theme .leaflet-popup-close-button:hover {
+  color: var(--on-surface);
 }
 
 /* Custom marker styles */

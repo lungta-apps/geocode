@@ -119,7 +119,7 @@ const SELECTED_COLOR = "#FF6B35"; // Orange for selected/highlighted property
 const UNSELECTED_OPACITY = 0.4; // Dimmed when another property is selected
 
 // Performance constants
-const MAX_VISIBLE_PROPERTIES = 50;
+const MAX_VISIBLE_PROPERTIES = 200;
 const POLYGON_SIMPLIFICATION_TOLERANCE = 0.0001;
 
 // Marker formatting options
@@ -390,7 +390,7 @@ function FormattingToolbar({
   };
 
   return (
-    <div className="mt-2 mb-2 border-t border-b border-gray-300 py-2">
+    <div className="mt-2 mb-2 border-t border-b border-gray-600 py-2">
       {/* Toolbar Buttons */}
       <div className="flex gap-1 mb-2">
         <Button
@@ -428,7 +428,7 @@ function FormattingToolbar({
       {/* Icon Picker Panel */}
       {activePanel === "icon" && (
         <div
-          className="grid grid-cols-3 gap-1 p-2 bg-gray-50 rounded"
+          className="grid grid-cols-3 gap-1 p-2 bg-gray-800 rounded border border-gray-600"
           data-testid={`panel-icon-picker-${geocode}`}
         >
           {ICON_OPTIONS.map((iconOption) => {
@@ -441,7 +441,7 @@ function FormattingToolbar({
                 className={`p-2 rounded border text-center transition-colors ${
                   isSelected
                     ? "bg-primary text-white border-primary"
-                    : "bg-white border-gray-300 hover:bg-gray-100"
+                    : "bg-gray-700 border-gray-600 hover:bg-gray-600 text-gray-200"
                 }`}
                 data-testid={`icon-option-${iconOption.id}-${geocode}`}
               >
@@ -456,7 +456,7 @@ function FormattingToolbar({
       {/* Color Picker Panel */}
       {activePanel === "color" && (
         <div
-          className="flex gap-1 p-2 bg-gray-50 rounded flex-wrap"
+          className="flex gap-1 p-2 bg-gray-800 rounded flex-wrap border border-gray-600"
           data-testid={`panel-color-picker-${geocode}`}
         >
           {COLOR_OPTIONS.map((colorOption) => {
@@ -466,7 +466,7 @@ function FormattingToolbar({
                 key={colorOption.id}
                 onClick={() => handleColorSelect(colorOption.value)}
                 className={`w-8 h-8 rounded-full border-2 transition-transform ${
-                  isSelected ? "border-gray-900 scale-110" : "border-gray-300"
+                  isSelected ? "border-white scale-110" : "border-gray-500"
                 }`}
                 style={{ backgroundColor: colorOption.value }}
                 title={colorOption.name}
@@ -480,7 +480,7 @@ function FormattingToolbar({
       {/* Label Editor Panel */}
       {activePanel === "label" && (
         <div
-          className="p-2 bg-gray-50 rounded"
+          className="p-2 bg-gray-800 rounded border border-gray-600"
           data-testid={`panel-label-editor-${geocode}`}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -494,7 +494,7 @@ function FormattingToolbar({
             onKeyDown={handleLabelKeyDown}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
-            className="text-sm"
+            className="text-sm bg-gray-900 border-gray-600 text-white placeholder:text-gray-400 focus:ring-primary focus:border-primary"
             data-testid={`input-label-${geocode}`}
             autoFocus
           />
@@ -966,7 +966,7 @@ export const PropertyMap = memo(function PropertyMap({
                     }}
                   >
                     <Popup className="dark-popup">
-                      <div className="text-gray-900 font-sans">
+                      <div className="text-on-surface font-sans">
                         <strong className="text-primary block mb-1">
                           {isSelected
                             ? "📍 Selected Property Parcel"
@@ -975,11 +975,11 @@ export const PropertyMap = memo(function PropertyMap({
                         <div className="text-sm font-medium mb-1">
                           {property.geocode}
                         </div>
-                        <span className="text-sm">{property.address}</span>
+                        <span className="text-sm text-on-surface-variant">{property.address}</span>
                         {markerFormats[property.geocode]?.label && (
-                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
-                            <strong>Label:</strong>{" "}
-                            {markerFormats[property.geocode].label}
+                          <div className="mt-2 p-2 bg-gray-800 border border-gray-600 rounded text-sm">
+                            <strong className="text-white">Label:</strong>{" "}
+                            <span className="text-gray-200">{markerFormats[property.geocode].label}</span>
                           </div>
                         )}
 
@@ -1017,7 +1017,7 @@ export const PropertyMap = memo(function PropertyMap({
                     icon={markerIcon}
                   >
                     <Popup className="dark-popup">
-                      <div className="text-gray-900 font-sans">
+                      <div className="text-on-surface font-sans">
                         <strong className="text-primary block mb-1">
                           {isSelected
                             ? "📍 Selected Property Center"
@@ -1026,11 +1026,11 @@ export const PropertyMap = memo(function PropertyMap({
                         <div className="text-sm font-medium mb-1">
                           {property.geocode}
                         </div>
-                        <span className="text-sm">{property.address}</span>
+                        <span className="text-sm text-on-surface-variant">{property.address}</span>
                         {markerFormats[property.geocode]?.label && (
-                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
-                            <strong>Label:</strong>{" "}
-                            {markerFormats[property.geocode].label}
+                          <div className="mt-2 p-2 bg-gray-800 border border-gray-600 rounded text-sm">
+                            <strong className="text-white">Label:</strong>{" "}
+                            <span className="text-gray-200">{markerFormats[property.geocode].label}</span>
                           </div>
                         )}
 

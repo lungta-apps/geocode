@@ -12,6 +12,9 @@ This is a full-stack web application that allows users to look up Montana proper
 - **LocalStorage Persistence**: All marker formatting (icon/color/label) persists across map size toggles and page reloads using stable geocode keys
 - **Real-time Updates**: Marker appearance updates immediately when selecting icons/colors or typing labels
 - **Improved Label Editor UX**: Label input uses draft state with save-on-blur/Enter to prevent popup closing while typing
+- **Dark Theme Popup Styling**: Map popups now match the app's dark UI with proper contrast, using CSS variables for surface colors, borders, and text
+- **Enhanced Toolbar Panels**: Icon/color/label picker panels use dark backgrounds (gray-800) with improved visibility and focus states
+- **Accessible Inputs**: Label input field styled with dark background, white text, gray placeholder, and primary focus ring for clear visibility
 - **Frontend-only Implementation**: No backend changes required, all formatting stored in browser localStorage
 - **SVG Icon Rendering**: Uses ReactDOMServer.renderToString() to convert Lucide icon components to SVG strings for Leaflet divIcon integration
 
