@@ -4,6 +4,31 @@
 
 This full-stack web application allows users to look up Montana property information using geocodes. It extracts physical addresses from the Montana State Library cadastral database, displays address details, and visualizes the location on an interactive map with precise coordinates. The application features a React frontend, an Express backend, and primarily uses the official Montana ArcGIS REST API for data retrieval, with fallback mechanisms. The project aims to provide a fast, reliable, and user-friendly tool for accessing Montana property data, significantly improving upon previous, slower methods.
 
+## Recent Changes (October 20, 2025)
+
+### Batch Formatting & Draggable Group Toolbar
+- **Group Edit Functionality**: Edit (pencil) button appears when markers are selected in "Select Group" mode
+- **Draggable Group Toolbar**: Portal-rendered floating toolbar (z-[9999]) with icon/color/note pickers for batch formatting
+- **Position Persistence**: Toolbar position saved to localStorage (groupToolbarPos), persists across map size changes and page reload
+- **Smart Initial Placement**: Automatically centers over map container on first open; validates saved position is within viewport
+- **Viewport Constraints**: Dragging constrained with 20px margin to prevent toolbar from going off-screen
+- **Batch Icon/Color**: Apply same icon or color to all selected markers with one click
+- **Batch Note Editor**: Textarea with Apply/Cancel buttons to set identical notes across selected markers
+- **Group Label Creation**: Creates one draggable label at centroid (average lat/lng) of all selected markers
+- **Unified State**: Batch operations use same markerFormats state and localStorage as single-marker edits
+- **Keyboard Support**: ESC closes toolbar, Enter (without Shift) saves batch notes
+- **Accessibility**: Header has cursor-grab/grabbing feedback and aria-grabbed attribute during drag
+- **Portal Rendering**: Uses React createPortal to render at end of <body> for proper z-index layering above map controls
+
+### Point Formatting & Draggable Labels
+- **Custom Marker Icons**: Lucide React icons (Home, Building, Flag, Star, Heart, MapPin) rendered via ReactDOMServer.renderToString()
+- **Custom Marker Colors**: 8-color palette (blue, red, green, orange, purple, pink, teal, yellow)
+- **Custom Marker Notes**: Text input for persistent notes displayed in marker popups
+- **Draggable Text Labels**: Custom pointer-based dragging (mousedown/move/up) converts screen coords to map lat/lng
+- **Label Editing**: Double-click to edit, Enter/Esc to save/cancel, hover for delete button
+- **LocalStorage Persistence**: All formatting (map-marker-formats) and labels (map-labels) persist across page reloads
+- **Dark Theme Styling**: All popups and toolbar panels use CSS variables matching app's dark UI
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
