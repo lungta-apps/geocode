@@ -93,7 +93,7 @@ L.Icon.Default.mergeOptions({
 
 interface PropertyMapProps {
   properties: PropertyInfo[];
-  selectedGeocode?: string | null;
+  selectedGeocodes?: string[];
   isSelectionMode?: boolean;
   onPropertySelection?: (geocodes: string[]) => void;
   selectedPropertyGeocodes?: string[];
@@ -1310,7 +1310,7 @@ const saveLabelsToStorage = (labels: MapLabel[]) => {
 
 export const PropertyMap = memo(function PropertyMap({
   properties,
-  selectedGeocode,
+  selectedGeocodes = [],
   isSelectionMode = false,
   onPropertySelection,
   selectedPropertyGeocodes = [],
@@ -1576,8 +1576,8 @@ export const PropertyMap = memo(function PropertyMap({
 
           {/* Render all properties with highlighting */}
           {propertiesWithColors.map((property) => {
-            const isSelected = selectedGeocode === property.geocode;
-            const isAnySelected = selectedGeocode !== null;
+            const isSelected = selectedGeocodes.includes(property.geocode);
+            const isAnySelected = selectedGeocodes.length > 0;
             const shouldBeDimmed = isAnySelected && !isSelected;
 
             // Check if property is in the current selection group
@@ -1600,7 +1600,7 @@ export const PropertyMap = memo(function PropertyMap({
 
             if (isSelected) {
               // Individual property selection (from clicking)
-              polygonColor = customColor || SELECTED_COLOR;
+              polygonColor = SELECTED_COLOR;
               weight = 3;
               fillOpacity = 0.2;
             } else if (isInSelectionGroup) {

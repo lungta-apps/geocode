@@ -56,7 +56,7 @@ export default function Home() {
   const [errorState, setErrorState] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>({ show: false, message: "", type: "info" });
   const [isShowingBatch, setIsShowingBatch] = useState(false);
-  const [selectedGeocode, setSelectedGeocode] = useState<string | null>(null);
+  const [selectedGeocodes, setSelectedGeocodes] = useState<string[]>([]);
   const [retryingGeocodes, setRetryingGeocodes] = useState<Set<string>>(new Set());
   const [isMapExpanded, setIsMapExpanded] = useState(false);
   
@@ -184,7 +184,7 @@ export default function Home() {
         setPropertyData(null); // Clear single property data
         setIsShowingBatch(true);
         setErrorState(null);
-        setSelectedGeocode(null); // Clear selection when new batch loads
+        setSelectedGeocodes([]); // Clear selection when new batch loads
         
         // Add to master collection
         const batchId = newBatchResults.batchId || `batch_${Date.now()}`;
@@ -214,7 +214,7 @@ export default function Home() {
       setBatchPropertyData([]);
       setIsShowingBatch(false);
       setErrorState(newBatchResults.error || 'Batch lookup failed');
-      setSelectedGeocode(null);
+      setSelectedGeocodes([]);
     }
   };
 
@@ -270,16 +270,23 @@ export default function Home() {
   };
 
   const handlePropertySelect = (geocode: string) => {
-    setSelectedGeocode(prev => prev === geocode ? null : geocode);
+    setSelectedGeocodes(prev => {
+      // Toggle: if already selected, remove it; otherwise add it
+      if (prev.includes(geocode)) {
+        return prev.filter(g => g !== geocode);
+      } else {
+        return [...prev, geocode];
+      }
+    });
   };
   
   // Selection mode handlers
   const handleToggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     if (isSelectionMode) {
-      // Clear both group selection and individual selection when exiting selection mode
+      // Clear both group selection and individual multi-selection when exiting selection mode
       setSelectedPropertyGeocodes([]);
-      setSelectedGeocode(null);
+      setSelectedGeocodes([]);
     }
   };
   
@@ -326,12 +333,12 @@ export default function Home() {
     // Update batch property data
     setBatchPropertyData(prev => prev.filter(p => p.geocode !== geocode));
 
-    // Clear selection if the deleted property was selected
-    if (selectedGeocode === geocode) {
-      setSelectedGeocode(null);
+    // Remove from multi-selection if the deleted property was selected
+    if (selectedGeocodes.includes(geocode)) {
+      setSelectedGeocodes(prev => prev.filter(g => g !== geocode));
     }
 
-    // Remove from selected property geocodes if applicable
+    // Remove from group selection if applicable
     if (selectedPropertyGeocodes.includes(geocode)) {
       setSelectedPropertyGeocodes(prev => prev.filter(g => g !== geocode));
     }
@@ -485,7 +492,7 @@ export default function Home() {
                         <PropertyMap 
                           key="accumulated-map"
                           properties={isSelectionMode ? mapPropertyData : filteredMapData} 
-                          selectedGeocode={selectedGeocode}
+                          selectedGeocodes={selectedGeocodes}
                           isSelectionMode={isSelectionMode}
                           onPropertySelection={handlePropertySelection}
                           selectedPropertyGeocodes={selectedPropertyGeocodes}
@@ -569,7 +576,7 @@ export default function Home() {
                             </h4>
                             <div className="max-h-40 overflow-y-auto space-y-1">
                               {filteredBatchResults.results.map((result, index) => {
-                                const isSelected = selectedGeocode === result.geocode;
+                                const isSelected = selectedGeocodes.includes(result.geocode);
                                 return (
                                 <div 
                                   key={index} 
@@ -774,7 +781,7 @@ export default function Home() {
                   <PropertyMap 
                     key={`expanded-map-${isMapExpanded}-${mapPropertyData.length}`}
                     properties={isSelectionMode ? mapPropertyData : filteredMapData} 
-                    selectedGeocode={selectedGeocode}
+                    selectedGeocodes={selectedGeocodes}
                     isSelectionMode={isSelectionMode}
                     onPropertySelection={handlePropertySelection}
                     selectedPropertyGeocodes={selectedPropertyGeocodes}
@@ -801,7 +808,7 @@ export default function Home() {
                             key={result.geocode}
                             onClick={() => handlePropertySelect(result.geocode)}
                             className={`p-2 rounded text-left transition-colors duration-200 text-sm ${
-                              selectedGeocode === result.geocode
+                              selectedGeocodes.includes(result.geocode)
                                 ? 'bg-orange-800/30 border border-orange-500 text-orange-300'
                                 : 'bg-surface-variant hover:bg-surface-variant/80 text-blue-400 hover:text-blue-300'
                             }`}
