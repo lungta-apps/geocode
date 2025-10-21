@@ -283,14 +283,11 @@ function DrawingControl({
       const selectedGeocodes = findPropertiesInShape(layer, properties);
       onPropertySelection(selectedGeocodes);
 
-      // Auto-start a new polygon draw after completing one
+      // Exit drawing mode after polygon completion
+      // User can now interact with the selected properties while staying in selection mode
       if (polygonDrawerRef.current) {
-        // Small delay to ensure the previous draw is fully complete
-        setTimeout(() => {
-          if (polygonDrawerRef.current && isSelectionMode) {
-            polygonDrawerRef.current.enable();
-          }
-        }, 100);
+        polygonDrawerRef.current.disable();
+        polygonDrawerRef.current = null;
       }
     };
 

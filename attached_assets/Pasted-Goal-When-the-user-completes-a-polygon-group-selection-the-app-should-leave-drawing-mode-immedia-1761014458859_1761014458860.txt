@@ -1,0 +1,53 @@
+Goal
+When the user completes a polygon (group selection), the app should leave drawing mode immediately so they can proceed (edit group, review results, etc.). Stay in selection mode; only the draw tool should be disabled.
+
+Implementation
+
+Locate the Leaflet-draw completion handler (the code listening for draw:created or equivalent).
+
+If there isn’t a centralized handler, add one where the map instance is initialized (likely in property-map.tsx or the map wrapper).
+
+The handler already computes selected geocodes and calls onPropertySelection(geocodes).
+
+After calling onPropertySelection(...), disable the active draw tool so drawing mode ends:
+// Exit drawing mode after polygon creation
+if (drawPolygonRef?.current?.disable) {
+  drawPolygonRef.current.disable();
+}
+drawPolygonRef.current = null;
+
+If a different variable is used for the active drawing tool, apply the same .disable() + null logic to that variable.
+
+If you enabled drawing via new L.Draw.Polygon(map, opts).enable(), keep a ref to that instance and disable it here.
+
+Do not exit selection mode here. The user should still see/keep the selection and the group toolbar behavior should remain unchanged.
+
+Both map states
+
+Ensure this works in original and expanded map views. If each view creates its own map instance, add the same handler/disable logic for both.
+
+No regressions
+
+No zoom/pan changes.
+
+Highlighting rules (orange icons + orange polygons) remain as-is.
+
+Group formatting and “Exit Selection” continue to work.
+
+Acceptance Criteria
+
+After finishing a polygon, the cursor returns to normal (no more crosshair/vertex handles).
+
+The selected properties remain highlighted and listed.
+
+User can immediately click other UI (edit group, results list) without being stuck in draw mode.
+
+Behavior is identical in original and expanded map states.
+
+Summary Output
+
+Files/lines changed.
+
+Where the draw:created (or equivalent) handler lives now.
+
+Confirmation that the draw tool is disabled after polygon completion and selection mode persists.
