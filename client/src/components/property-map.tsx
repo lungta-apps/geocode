@@ -100,7 +100,6 @@ interface PropertyMapProps {
   isGroupToolbarOpen?: boolean;
   onCloseGroupToolbar?: () => void;
   onMarkerClick?: (geocode: string) => void;
-  onRegisterStartPolygonDrawing?: (startFn: (() => void) | null) => void;
 }
 
 interface PropertyWithColor {
@@ -223,62 +222,33 @@ interface DrawingControlProps {
   isSelectionMode: boolean;
   onPropertySelection: (geocodes: string[]) => void;
   properties: PropertyInfo[];
-  selectedPropertyGeocodes: string[];
-  onRegisterStartPolygonDrawing?: (startFn: (() => void) | null) => void;
 }
 
 function DrawingControl({
   isSelectionMode,
   onPropertySelection,
   properties,
-  selectedPropertyGeocodes,
-  onRegisterStartPolygonDrawing,
 }: DrawingControlProps) {
   const map = useMap();
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
-  const polygonDrawerRef = useRef<L.Draw.Polygon | null>(null);
-
-  // Register polygon drawing start function with parent
+  const drawControlRef = useRef<L.Control.Draw | null>(null);
+  
+  // Use refs to avoid re-initializing the control when properties change
+  const propertiesRef = useRef(properties);
+  const onPropertySelectionRef = useRef(onPropertySelection);
+  
+  // Update refs when props change
   useEffect(() => {
-    if (!isSelectionMode || !onRegisterStartPolygonDrawing) return;
+    propertiesRef.current = properties;
+    onPropertySelectionRef.current = onPropertySelection;
+  }, [properties, onPropertySelection]);
 
-    // Create a function that starts polygon drawing
-    const startDrawing = () => {
-      if (polygonDrawerRef.current) {
-        polygonDrawerRef.current.disable();
-        polygonDrawerRef.current = null;
-      }
-      
-      const polygonDrawer = new L.Draw.Polygon(map, {
-        shapeOptions: {
-          color: '#FF6B35',
-          weight: 2,
-          opacity: 0.8,
-          fillOpacity: 0.2,
-        },
-        showArea: true,
-        metric: true,
-      });
-      polygonDrawerRef.current = polygonDrawer;
-      polygonDrawer.enable();
-    };
-
-    // Call the callback to register the start function
-    onRegisterStartPolygonDrawing(startDrawing);
-    
-    return () => {
-      // Cleanup: unregister the function
-      onRegisterStartPolygonDrawing(null);
-    };
-  }, [isSelectionMode, map, onRegisterStartPolygonDrawing]);
-
-  // Guard: Prevent accidental re-enable when exiting selection mode
   useEffect(() => {
     if (!isSelectionMode) {
       // Clean up when not in selection mode
-      if (polygonDrawerRef.current) {
-        polygonDrawerRef.current.disable();
-        polygonDrawerRef.current = null;
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
       }
       if (drawnItemsRef.current) {
         map.removeLayer(drawnItemsRef.current);
@@ -292,6 +262,36 @@ function DrawingControl({
     map.addLayer(drawnItems);
     drawnItemsRef.current = drawnItems;
 
+    // Create draw control with only polygon tool
+    const drawControl = new L.Control.Draw({
+      position: 'topleft',
+      draw: {
+        polygon: {
+          shapeOptions: {
+            color: '#FF6B35',
+            weight: 2,
+            opacity: 0.8,
+            fillOpacity: 0.2,
+          },
+          showArea: true,
+          metric: true,
+        },
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+        circlemarker: false,
+      },
+      edit: {
+        featureGroup: drawnItems,
+        remove: false,
+        edit: false,
+      },
+    });
+
+    map.addControl(drawControl);
+    drawControlRef.current = drawControl;
+
     // Handle draw events
     const handleDrawCreated = (e: L.LeafletEvent) => {
       const drawEvent = e as L.DrawEvents.Created;
@@ -301,16 +301,9 @@ function DrawingControl({
       drawnItems.clearLayers();
       drawnItems.addLayer(layer);
 
-      // Find properties within the drawn area
-      const selectedGeocodes = findPropertiesInShape(layer, properties);
-      onPropertySelection(selectedGeocodes);
-
-      // Exit drawing mode after polygon completion
-      // User can now interact with the selected properties while staying in selection mode
-      if (polygonDrawerRef.current) {
-        polygonDrawerRef.current.disable();
-        polygonDrawerRef.current = null;
-      }
+      // Find properties within the drawn area using current ref values
+      const selectedGeocodes = findPropertiesInShape(layer, propertiesRef.current);
+      onPropertySelectionRef.current(selectedGeocodes);
     };
 
     map.on(L.Draw.Event.CREATED, handleDrawCreated);
@@ -318,16 +311,16 @@ function DrawingControl({
     return () => {
       map.off(L.Draw.Event.CREATED, handleDrawCreated);
 
-      if (polygonDrawerRef.current) {
-        polygonDrawerRef.current.disable();
-        polygonDrawerRef.current = null;
+      if (drawControlRef.current) {
+        map.removeControl(drawControlRef.current);
+        drawControlRef.current = null;
       }
       if (drawnItemsRef.current) {
         map.removeLayer(drawnItemsRef.current);
         drawnItemsRef.current = null;
       }
     };
-  }, [isSelectionMode, map, onPropertySelection, properties]);
+  }, [isSelectionMode, map]);
 
   return null;
 }
@@ -1591,8 +1584,6 @@ export const PropertyMap = memo(function PropertyMap({
               isSelectionMode={isSelectionMode}
               onPropertySelection={onPropertySelection!}
               properties={properties}
-              selectedPropertyGeocodes={selectedPropertyGeocodes}
-              onRegisterStartPolygonDrawing={onRegisterStartPolygonDrawing}
             />
           )}
 

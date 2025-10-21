@@ -101,25 +101,6 @@ export default function Home() {
   >([]);
   const [isGroupToolbarOpen, setIsGroupToolbarOpen] = useState(false);
 
-  // Polygon drawing state - stores the function to start polygon drawing
-  const [startPolygonDrawingFn, setStartPolygonDrawingFn] = useState<
-    (() => void) | null
-  >(null);
-
-  // Handler to register the start polygon drawing function from the map component
-  const handleRegisterStartPolygonDrawing = (
-    startFn: (() => void) | null,
-  ) => {
-    setStartPolygonDrawingFn(() => startFn);
-  };
-
-  // Handler to start polygon drawing
-  const handleStartPolygonDrawing = () => {
-    if (startPolygonDrawingFn) {
-      startPolygonDrawingFn();
-    }
-  };
-
   // Auto-close Group Toolbar when selection becomes empty
   useEffect(() => {
     if (selectedPropertyGeocodes.length === 0 && isGroupToolbarOpen) {
@@ -550,21 +531,6 @@ export default function Home() {
                                 : "Select Group"}
                             </Button>
 
-                            {isSelectionMode && (
-                              <Button
-                                onClick={handleStartPolygonDrawing}
-                                variant="outline"
-                                size="sm"
-                                className="border-blue-600 hover:bg-blue-700 text-blue-300 hover:text-white"
-                                title="Start drawing a polygon to select properties"
-                                data-testid="button-start-polygon"
-                                disabled={!startPolygonDrawingFn}
-                              >
-                                <Circle className="h-4 w-4 mr-1" />
-                                Start Polygon
-                              </Button>
-                            )}
-
                             {selectedPropertyGeocodes.length > 0 && (
                               <>
                                 <Button
@@ -646,7 +612,6 @@ export default function Home() {
                             setIsGroupToolbarOpen(false)
                           }
                           onMarkerClick={handlePropertySelect}
-                          onRegisterStartPolygonDrawing={handleRegisterStartPolygonDrawing}
                         />
                       </div>
                     )}
@@ -954,21 +919,6 @@ export default function Home() {
                         {isSelectionMode ? "Exit Selection" : "Select Group"}
                       </Button>
 
-                      {isSelectionMode && (
-                        <Button
-                          onClick={handleStartPolygonDrawing}
-                          variant="outline"
-                          size="sm"
-                          className="border-blue-600 hover:bg-blue-700 text-blue-300 hover:text-white"
-                          title="Start drawing a polygon to select properties"
-                          data-testid="button-start-polygon-expanded"
-                          disabled={!startPolygonDrawingFn}
-                        >
-                          <Circle className="h-4 w-4 mr-1" />
-                          Start Polygon
-                        </Button>
-                      )}
-
                       {selectedPropertyGeocodes.length > 0 && (
                         <>
                           <Button
@@ -1027,7 +977,6 @@ export default function Home() {
                     isGroupToolbarOpen={isGroupToolbarOpen}
                     onCloseGroupToolbar={() => setIsGroupToolbarOpen(false)}
                     onMarkerClick={handlePropertySelect}
-                    onRegisterStartPolygonDrawing={handleRegisterStartPolygonDrawing}
                   />
                 </div>
               </div>
