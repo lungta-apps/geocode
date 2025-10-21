@@ -6,13 +6,14 @@ This full-stack web application allows users to look up Montana property informa
 
 ## Recent Changes (October 21, 2025)
 
-### Polygon Selection UX Enhancement
-- **Explicit "Start Polygon" Button**: Replaced auto-start polygon drawing with user-activated button for better control
-- **Callback Registration Pattern**: Child map component registers polygon drawing function via `onRegisterStartPolygonDrawing` callback
-- **Button Availability**: "Start Polygon" button appears only when in selection mode, disabled until drawing function is ready
-- **Lifecycle Management**: Proper cleanup and ref management prevents accidental re-enable during view toggles or formatting changes
-- **Dual View Support**: Works identically in both normal and expanded map views with synchronized state
-- **Smart Guards**: Prevents polygon drawing from being accidentally re-enabled during toolbar interactions or mode transitions
+### On-Map Polygon Selection Toolbar
+- **L.Control.Draw Integration**: Replaced header button approach with native Leaflet drawing toolbar appearing on the map when selection mode is active
+- **Single Polygon Tool**: Toolbar shows only the polygon drawing button; circle, edit, and trash tools are disabled via configuration
+- **Top-Left Positioning**: Drawing control appears at the traditional top-left map position for familiar UX
+- **Stable Toolbar**: Uses refs to prevent toolbar re-initialization when property data changes, avoiding flickering
+- **Auto-Exit Drawing**: Drawing mode automatically exits after polygon completion, allowing immediate interaction with selected properties
+- **Dual View Support**: Works identically in both normal and expanded map views
+- **Proper Cleanup**: Toolbar and drawn layers are removed when exiting selection mode or unmounting component
 
 ## Recent Changes (October 20, 2025)
 
