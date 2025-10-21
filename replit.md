@@ -4,6 +4,16 @@
 
 This full-stack web application allows users to look up Montana property information using geocodes. It extracts physical addresses from the Montana State Library cadastral database, displays address details, and visualizes the location on an interactive map with precise coordinates. The application features a React frontend, an Express backend, and primarily uses the official Montana ArcGIS REST API for data retrieval, with fallback mechanisms. The project aims to provide a fast, reliable, and user-friendly tool for accessing Montana property data, significantly improving upon previous, slower methods.
 
+## Recent Changes (October 21, 2025)
+
+### Polygon Selection UX Enhancement
+- **Explicit "Start Polygon" Button**: Replaced auto-start polygon drawing with user-activated button for better control
+- **Callback Registration Pattern**: Child map component registers polygon drawing function via `onRegisterStartPolygonDrawing` callback
+- **Button Availability**: "Start Polygon" button appears only when in selection mode, disabled until drawing function is ready
+- **Lifecycle Management**: Proper cleanup and ref management prevents accidental re-enable during view toggles or formatting changes
+- **Dual View Support**: Works identically in both normal and expanded map views with synchronized state
+- **Smart Guards**: Prevents polygon drawing from being accidentally re-enabled during toolbar interactions or mode transitions
+
 ## Recent Changes (October 20, 2025)
 
 ### Batch Formatting & Draggable Group Toolbar
