@@ -100,6 +100,7 @@ interface PropertyMapProps {
   isGroupToolbarOpen?: boolean;
   onCloseGroupToolbar?: () => void;
   onMarkerClick?: (geocode: string) => void;
+  onRegisterStartPolygonDrawing?: (startFn: (() => void) | null) => void;
 }
 
 interface PropertyWithColor {
@@ -223,6 +224,7 @@ interface DrawingControlProps {
   onPropertySelection: (geocodes: string[]) => void;
   properties: PropertyInfo[];
   selectedPropertyGeocodes: string[];
+  onRegisterStartPolygonDrawing?: (startFn: (() => void) | null) => void;
 }
 
 function DrawingControl({
@@ -230,11 +232,47 @@ function DrawingControl({
   onPropertySelection,
   properties,
   selectedPropertyGeocodes,
+  onRegisterStartPolygonDrawing,
 }: DrawingControlProps) {
   const map = useMap();
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
   const polygonDrawerRef = useRef<L.Draw.Polygon | null>(null);
 
+  // Register polygon drawing start function with parent
+  useEffect(() => {
+    if (!isSelectionMode || !onRegisterStartPolygonDrawing) return;
+
+    // Create a function that starts polygon drawing
+    const startDrawing = () => {
+      if (polygonDrawerRef.current) {
+        polygonDrawerRef.current.disable();
+        polygonDrawerRef.current = null;
+      }
+      
+      const polygonDrawer = new L.Draw.Polygon(map, {
+        shapeOptions: {
+          color: '#FF6B35',
+          weight: 2,
+          opacity: 0.8,
+          fillOpacity: 0.2,
+        },
+        showArea: true,
+        metric: true,
+      });
+      polygonDrawerRef.current = polygonDrawer;
+      polygonDrawer.enable();
+    };
+
+    // Call the callback to register the start function
+    onRegisterStartPolygonDrawing(startDrawing);
+    
+    return () => {
+      // Cleanup: unregister the function
+      onRegisterStartPolygonDrawing(null);
+    };
+  }, [isSelectionMode, map, onRegisterStartPolygonDrawing]);
+
+  // Guard: Prevent accidental re-enable when exiting selection mode
   useEffect(() => {
     if (!isSelectionMode) {
       // Clean up when not in selection mode
@@ -253,22 +291,6 @@ function DrawingControl({
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     drawnItemsRef.current = drawnItems;
-
-    // Create polygon drawer programmatically (no UI toolbar)
-    const polygonDrawer = new L.Draw.Polygon(map, {
-      shapeOptions: {
-        color: '#FF6B35',
-        weight: 2,
-        opacity: 0.8,
-        fillOpacity: 0.2,
-      },
-      showArea: true,
-      metric: true,
-    });
-    polygonDrawerRef.current = polygonDrawer;
-
-    // Auto-start polygon drawing immediately
-    polygonDrawer.enable();
 
     // Handle draw events
     const handleDrawCreated = (e: L.LeafletEvent) => {
@@ -1316,6 +1338,7 @@ export const PropertyMap = memo(function PropertyMap({
   isGroupToolbarOpen = false,
   onCloseGroupToolbar,
   onMarkerClick,
+  onRegisterStartPolygonDrawing,
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
 
@@ -1569,6 +1592,7 @@ export const PropertyMap = memo(function PropertyMap({
               onPropertySelection={onPropertySelection!}
               properties={properties}
               selectedPropertyGeocodes={selectedPropertyGeocodes}
+              onRegisterStartPolygonDrawing={onRegisterStartPolygonDrawing}
             />
           )}
 

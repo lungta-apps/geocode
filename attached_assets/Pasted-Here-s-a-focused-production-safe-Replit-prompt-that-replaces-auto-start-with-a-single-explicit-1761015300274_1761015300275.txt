@@ -1,0 +1,108 @@
+Here’s a focused, production-safe **Replit prompt** that replaces auto-start with a single, explicit polygon action and ensures draw mode never re-enables unexpectedly — in both map states.
+
+---
+
+### 🟢 Replit Prompt — “Select Group” + Single **Start Polygon** Button (No Auto-Start)
+
+**Goal**
+Make group selection stable and explicit:
+
+* Clicking **Select Group** enters selection mode but **does not** start drawing.
+* Show **one** action: **Start Polygon** (no circle/edit/trash).
+* When the user finishes a polygon, **drawing disables** and stays off (even after formatting changes).
+* Works identically in **original** and **expanded** map states.
+
+---
+
+### Implementation
+
+1. **UI changes**
+
+* Remove the on-map toolbar and all unused buttons (circle, edit, trash).
+* In the selection controls (where “Select Group” / “Exit Selection” lives), add a **Start Polygon** button that appears **only** when `isSelectionMode === true`.
+
+  * Label: “Start Polygon”
+  * On click: programmatically enable polygon drawing (see step 2).
+
+2. **Programmatic polygon drawing**
+
+* Maintain a **ref** to the active draw instance: `drawPolygonRef = useRef<L.Draw.Polygon | null>(null)`.
+* On **Start Polygon** button click:
+
+  ```ts
+  if (drawPolygonRef.current) {
+    drawPolygonRef.current.disable(); // safety
+    drawPolygonRef.current = null;
+  }
+  drawPolygonRef.current = new L.Draw.Polygon(mapRef.current, {/* existing style opts */});
+  drawPolygonRef.current.enable();
+  ```
+* Do **not** auto-start drawing on entering selection mode.
+
+3. **Exit drawing when polygon completes**
+
+* In the `draw:created` handler (or equivalent), after computing geocodes and calling `onPropertySelection(geocodes)`:
+
+  ```ts
+  drawPolygonRef.current?.disable?.();
+  drawPolygonRef.current = null;
+  ```
+* Do **not** exit selection mode here; only disable the drawing tool.
+
+4. **Hardening: prevent accidental re-enable**
+
+* Ensure **any** code path that updates formatting/UI (e.g., after changing colors/icons, opening/closing group formatting panel, badge updates) **does not** call `.enable()` on a draw tool.
+* Add a small guard hook that runs after selection/formatting state changes:
+
+  ```ts
+  useEffect(() => {
+    // Never stay in draw mode after unrelated state updates
+    if (drawPolygonRef.current && !isSelectionMode) {
+      drawPolygonRef.current.disable();
+      drawPolygonRef.current = null;
+    }
+  }, [isSelectionMode]);
+
+  useEffect(() => {
+    // Formatting changes should not re-enter draw mode
+    if (drawPolygonRef.current) {
+      drawPolygonRef.current.disable();
+      drawPolygonRef.current = null;
+    }
+  }, [isGroupToolbarOpen /* or any formatting state you toggle */]);
+  ```
+* Remove any legacy code that enables polygon/circle tools automatically (previous auto-start logic).
+
+5. **Both map states**
+
+* Apply the same Start Polygon behavior in **original** and **expanded** map views:
+
+  * Each map instance must own its **own** `drawPolygonRef`.
+  * Each instance must wire `draw:created` to disable its own tool.
+  * Toggling between views must **not** enable drawing implicitly.
+
+6. **Cleanup**
+
+* Delete unused imports (circle/edit/trash icons, circle tool wiring).
+* Remove CSS scoped to the old toolbar.
+* Keep **Exit Selection** logic unchanged (it ends selection mode and clears draw instances if any).
+
+---
+
+### Acceptance Criteria
+
+* **Original view**: Click **Select Group** → “Start Polygon” appears. Click **Start Polygon** → draw polygon → on completion, drawing turns off; selection remains active; user can format/edit without re-entering draw mode.
+* **Expanded view**: Same behavior.
+* Switching views never auto-starts drawing.
+* Formatting changes (color/icon) **never** re-enable draw mode.
+* No circle/edit/trash UI remains; no auto-start on entering selection mode.
+* No zoom/pan side effects.
+
+---
+
+### Summary Output
+
+* Files/lines changed.
+* Where the **Start Polygon** button was added.
+* Where `drawPolygonRef` is defined and disabled on completion.
+* Confirmation that auto-start was removed and accidental re-enable paths were eliminated in both map states.
