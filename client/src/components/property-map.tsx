@@ -232,11 +232,11 @@ function DrawingControl({
   const map = useMap();
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
   const drawControlRef = useRef<L.Control.Draw | null>(null);
-  
+
   // Use refs to avoid re-initializing the control when properties change
   const propertiesRef = useRef(properties);
   const onPropertySelectionRef = useRef(onPropertySelection);
-  
+
   // Update refs when props change
   useEffect(() => {
     propertiesRef.current = properties;
@@ -264,11 +264,11 @@ function DrawingControl({
 
     // Create draw control with only polygon tool
     const drawControl = new L.Control.Draw({
-      position: 'topleft',
+      position: "topleft",
       draw: {
         polygon: {
           shapeOptions: {
-            color: '#FF6B35',
+            color: "#FF6B35",
             weight: 2,
             opacity: 0.8,
             fillOpacity: 0.2,
@@ -302,7 +302,10 @@ function DrawingControl({
       drawnItems.addLayer(layer);
 
       // Find properties within the drawn area using current ref values
-      const selectedGeocodes = findPropertiesInShape(layer, propertiesRef.current);
+      const selectedGeocodes = findPropertiesInShape(
+        layer,
+        propertiesRef.current,
+      );
       onPropertySelectionRef.current(selectedGeocodes);
     };
 
@@ -1493,10 +1496,10 @@ export const PropertyMap = memo(function PropertyMap({
         size={size}
         color={markerColor}
         fill={markerColor}
-        strokeWidth={2.5}
+        stroke="#575757"
+        strokeWidth={1.6}
         style={{
-          filter:
-            "drop-shadow(0 0 2px white) drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+          shapeRendering: "geometricPrecision",
           opacity: opacity,
         }}
       />,
