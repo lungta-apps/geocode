@@ -20,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import {
   Plus,
   Minus,
-  MousePointer,
   Circle,
   Map,
   Trash2,
@@ -234,14 +233,14 @@ function DrawingControl({
 }: DrawingControlProps) {
   const map = useMap();
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
-  const drawControlRef = useRef<L.Control.Draw | null>(null);
+  const polygonDrawerRef = useRef<L.Draw.Polygon | null>(null);
 
   useEffect(() => {
     if (!isSelectionMode) {
       // Clean up when not in selection mode
-      if (drawControlRef.current) {
-        map.removeControl(drawControlRef.current);
-        drawControlRef.current = null;
+      if (polygonDrawerRef.current) {
+        polygonDrawerRef.current.disable();
+        polygonDrawerRef.current = null;
       }
       if (drawnItemsRef.current) {
         map.removeLayer(drawnItemsRef.current);
@@ -255,23 +254,21 @@ function DrawingControl({
     map.addLayer(drawnItems);
     drawnItemsRef.current = drawnItems;
 
-    // Initialize draw controls
-    const drawControl = new L.Control.Draw({
-      edit: {
-        featureGroup: drawnItems,
+    // Create polygon drawer programmatically (no UI toolbar)
+    const polygonDrawer = new L.Draw.Polygon(map, {
+      shapeOptions: {
+        color: '#FF6B35',
+        weight: 2,
+        opacity: 0.8,
+        fillOpacity: 0.2,
       },
-      draw: {
-        polyline: false,
-        polygon: {},
-        circle: {},
-        rectangle: false,
-        marker: false,
-        circlemarker: false,
-      },
+      showArea: true,
+      metric: true,
     });
+    polygonDrawerRef.current = polygonDrawer;
 
-    map.addControl(drawControl);
-    drawControlRef.current = drawControl;
+    // Auto-start polygon drawing immediately
+    polygonDrawer.enable();
 
     // Handle draw events
     const handleDrawCreated = (e: L.LeafletEvent) => {
@@ -285,26 +282,30 @@ function DrawingControl({
       // Find properties within the drawn area
       const selectedGeocodes = findPropertiesInShape(layer, properties);
       onPropertySelection(selectedGeocodes);
-    };
 
-    const handleDrawDeleted = () => {
-      onPropertySelection([]);
+      // Auto-start a new polygon draw after completing one
+      if (polygonDrawerRef.current) {
+        // Small delay to ensure the previous draw is fully complete
+        setTimeout(() => {
+          if (polygonDrawerRef.current && isSelectionMode) {
+            polygonDrawerRef.current.enable();
+          }
+        }, 100);
+      }
     };
 
     map.on(L.Draw.Event.CREATED, handleDrawCreated);
-    map.on(L.Draw.Event.DELETED, handleDrawDeleted);
-    map.on(L.Draw.Event.EDITED, handleDrawCreated);
 
     return () => {
       map.off(L.Draw.Event.CREATED, handleDrawCreated);
-      map.off(L.Draw.Event.DELETED, handleDrawDeleted);
-      map.off(L.Draw.Event.EDITED, handleDrawCreated);
 
-      if (drawControlRef.current) {
-        map.removeControl(drawControlRef.current);
+      if (polygonDrawerRef.current) {
+        polygonDrawerRef.current.disable();
+        polygonDrawerRef.current = null;
       }
       if (drawnItemsRef.current) {
         map.removeLayer(drawnItemsRef.current);
+        drawnItemsRef.current = null;
       }
     };
   }, [isSelectionMode, map, onPropertySelection, properties]);
