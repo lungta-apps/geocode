@@ -52,6 +52,7 @@ import {
   getFailedGeocodes,
 } from "@/lib/csv-utils";
 import { apiRequest } from "@/lib/queryClient";
+import { applyDefaultFormatsToProperties } from "@/components/property-map";
 
 interface ToastState {
   show: boolean;
@@ -100,6 +101,10 @@ export default function Home() {
     string[]
   >([]);
   const [isGroupToolbarOpen, setIsGroupToolbarOpen] = useState(false);
+
+  // Pre-mapping default icon and color state
+  const [defaultIcon, setDefaultIcon] = useState<string>("default");
+  const [defaultColor, setDefaultColor] = useState<string>("#2196F3"); // Blue circle default
 
   // Auto-close Group Toolbar when selection becomes empty
   useEffect(() => {
@@ -180,6 +185,13 @@ export default function Home() {
           timestamp: new Date().toISOString(),
         });
 
+        // Apply pre-selected default icon and color to new property
+        applyDefaultFormatsToProperties([response.data.geocode], defaultIcon, defaultColor);
+        
+        // Reset defaults to blue circle for next search
+        setDefaultIcon("default");
+        setDefaultColor("#2196F3");
+
         showToast("Property information loaded successfully!", "success");
       } else {
         setPropertyData(null);
@@ -247,6 +259,14 @@ export default function Home() {
           timestamp: new Date().toISOString(),
           sourceGeocodes: requestedGeocodes,
         });
+
+        // Apply pre-selected default icon and color to new properties
+        const newGeocodes = successfulProperties.map((p) => p.geocode);
+        applyDefaultFormatsToProperties(newGeocodes, defaultIcon, defaultColor);
+        
+        // Reset defaults to blue circle for next batch
+        setDefaultIcon("default");
+        setDefaultColor("#2196F3");
 
         const total = newBatchResults.totalRequested;
         const successful = newBatchResults.totalSuccessful;
@@ -459,6 +479,10 @@ export default function Home() {
             isLoading={searchMutation.isPending}
             mapMode={mapMode}
             onMapModeChange={setMapMode}
+            defaultIcon={defaultIcon}
+            defaultColor={defaultColor}
+            onDefaultIconChange={setDefaultIcon}
+            onDefaultColorChange={setDefaultColor}
           />
 
           {/* Clear Map Button - only show when there are properties to clear */}
