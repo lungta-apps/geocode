@@ -21,7 +21,7 @@ import {
   Plus,
   Minus,
   Circle,
-  Map,
+  Map as MapIcon,
   Trash2,
   Palette,
   Tag,
@@ -144,8 +144,8 @@ interface MapLabel {
   size?: "sm" | "md" | "lg";
 }
 
-// Available icon options
-const ICON_OPTIONS = [
+// Available icon options - exported for reuse in pre-mapping selection
+export const ICON_OPTIONS = [
   { id: "default", name: "Default", icon: Circle },
   { id: "home", name: "Home", icon: Home },
   { id: "building", name: "Building", icon: Building },
@@ -154,8 +154,8 @@ const ICON_OPTIONS = [
   { id: "heart", name: "Heart", icon: Heart },
 ];
 
-// Available color options
-const COLOR_OPTIONS = [
+// Available color options - exported for reuse in pre-mapping selection
+export const COLOR_OPTIONS = [
   { id: "blue", name: "Blue", value: "#2196F3" },
   { id: "red", name: "Red", value: "#F44336" },
   { id: "green", name: "Green", value: "#4CAF50" },
@@ -1172,7 +1172,7 @@ function BasemapSelector({
           data-testid="button-basemap-selector"
           size="sm"
         >
-          <Map className="h-4 w-4" />
+          <MapIcon className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -1272,8 +1272,8 @@ function BasemapControls({
 const MARKER_FORMATS_STORAGE_KEY = "map-marker-formats";
 const MAP_LABELS_STORAGE_KEY = "map-labels";
 
-// Helper to load marker formats from localStorage
-const loadMarkerFormatsFromStorage = (): Record<string, MarkerFormat> => {
+// Helper to load marker formats from localStorage - exported for external use
+export const loadMarkerFormatsFromStorage = (): Record<string, MarkerFormat> => {
   if (typeof window === "undefined") return {};
 
   try {
@@ -1287,14 +1287,41 @@ const loadMarkerFormatsFromStorage = (): Record<string, MarkerFormat> => {
   return {};
 };
 
-// Helper to save marker formats to localStorage
-const saveMarkerFormatsToStorage = (formats: Record<string, MarkerFormat>) => {
+// Helper to save marker formats to localStorage - exported for external use
+export const saveMarkerFormatsToStorage = (formats: Record<string, MarkerFormat>) => {
   if (typeof window === "undefined") return;
 
   try {
     localStorage.setItem(MARKER_FORMATS_STORAGE_KEY, JSON.stringify(formats));
   } catch (error) {
     console.error("Failed to save marker formats to localStorage:", error);
+  }
+};
+
+// Helper to apply default formatting to new properties
+export const applyDefaultFormatsToProperties = (
+  geocodes: string[],
+  defaultIcon: string,
+  defaultColor: string
+) => {
+  if (typeof window === "undefined") return;
+  
+  const existingFormats = loadMarkerFormatsFromStorage();
+  let needsUpdate = false;
+  
+  geocodes.forEach((geocode) => {
+    // Only apply defaults if no format exists for this geocode
+    if (!existingFormats[geocode]) {
+      existingFormats[geocode] = {
+        icon: defaultIcon !== "default" ? defaultIcon : undefined,
+        color: defaultColor !== "#2196F3" ? defaultColor : undefined,
+      };
+      needsUpdate = true;
+    }
+  });
+  
+  if (needsUpdate) {
+    saveMarkerFormatsToStorage(existingFormats);
   }
 };
 
@@ -1337,6 +1364,9 @@ export const PropertyMap = memo(function PropertyMap({
   onRegisterStartPolygonDrawing,
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
+
+  // Refs for marker instances to control popup behavior
+  const markerRefs = useRef<Map<string, L.Marker>>(new Map());
 
   // Marker formatting state - stores custom icon, color, and note per geocode
   // Initialize from localStorage to persist across map size toggles and page reloads
@@ -1754,10 +1784,34 @@ export const PropertyMap = memo(function PropertyMap({
                   <Marker
                     position={[property.lat, property.lng]}
                     icon={markerIcon}
+                    ref={(ref) => {
+                      if (ref) {
+                        markerRefs.current.set(property.geocode, ref);
+                      } else {
+                        // Clean up ref when marker unmounts to prevent memory leaks
+                        markerRefs.current.delete(property.geocode);
+                      }
+                    }}
                     eventHandlers={{
-                      click: () => {
+                      click: (e) => {
+                        // Left-click: select only, do not open popup
                         if (onMarkerClick) {
                           onMarkerClick(property.geocode);
+                        }
+                        // Close popup immediately if it was auto-opened
+                        const marker = markerRefs.current.get(property.geocode);
+                        // Guard against stale references by checking if marker is still mounted
+                        if (marker && (marker as any)._map) {
+                          marker.closePopup();
+                        }
+                      },
+                      contextmenu: (e) => {
+                        // Right-click: open popup
+                        e.originalEvent.preventDefault();
+                        const marker = markerRefs.current.get(property.geocode);
+                        // Guard against stale references by checking if marker is still mounted
+                        if (marker && (marker as any)._map) {
+                          marker.openPopup();
                         }
                       },
                     }}

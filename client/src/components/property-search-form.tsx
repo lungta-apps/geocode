@@ -13,10 +13,11 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Upload, FileText, CheckCircle, XCircle, List, Eye, Download, RefreshCw, RotateCcw } from "lucide-react";
+import { Loader2, Upload, FileText, CheckCircle, XCircle, List, Eye, Download, RefreshCw, RotateCcw, MapPin, Palette } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { batchResultsToCSV, downloadCSV, generateCsvFilename, getFailedGeocodes } from "@/lib/csv-utils";
 import { BatchProgress } from "@/components/batch-progress";
+import { ICON_OPTIONS, COLOR_OPTIONS } from "@/components/property-map";
 
 interface PropertySearchFormProps {
   onSearch: (geocode: string) => void;
@@ -25,9 +26,13 @@ interface PropertySearchFormProps {
   isLoading: boolean;
   mapMode: 'replace' | 'add';
   onMapModeChange: (mode: 'replace' | 'add') => void;
+  defaultIcon: string;
+  defaultColor: string;
+  onDefaultIconChange: (icon: string) => void;
+  onDefaultColorChange: (color: string) => void;
 }
 
-export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect, isLoading, mapMode, onMapModeChange }: PropertySearchFormProps) {
+export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect, isLoading, mapMode, onMapModeChange, defaultIcon, defaultColor, onDefaultIconChange, onDefaultColorChange }: PropertySearchFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileValidation, setFileValidation] = useState<{ isValid: boolean; message?: string } | null>(null);
   const [batchResults, setBatchResults] = useState<BatchApiResponse | null>(null);
@@ -38,6 +43,8 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
   const [retryingGeocodes, setRetryingGeocodes] = useState<Set<string>>(new Set());
   const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
   const [showProgressTracker, setShowProgressTracker] = useState(false);
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<GeocodeSearch>({
@@ -439,6 +446,113 @@ export function PropertySearchForm({ onSearch, onBatchResults, onPropertySelect,
                       : 'New properties will replace all existing map results'
                     }
                   </p>
+                </div>
+
+                {/* Pre-Mapping Icon & Color Selection */}
+                <div className="p-3 bg-surface-variant rounded-lg border border-gray-600">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-on-surface">Default Icon & Color</Label>
+                    <div className="flex items-center space-x-2">
+                      {/* Icon Picker Button */}
+                      <Button
+                        onClick={() => {
+                          setShowIconPicker(!showIconPicker);
+                          setShowColorPicker(false);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs border-gray-600 hover:bg-gray-700"
+                        data-testid="button-pre-map-icon"
+                      >
+                        <MapPin className="h-3 w-3 mr-1" />
+                        Icon
+                      </Button>
+                      {/* Color Picker Button */}
+                      <Button
+                        onClick={() => {
+                          setShowColorPicker(!showColorPicker);
+                          setShowIconPicker(false);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs border-gray-600 hover:bg-gray-700"
+                        data-testid="button-pre-map-color"
+                      >
+                        <Palette className="h-3 w-3 mr-1" />
+                        Color
+                      </Button>
+                      {/* Current Selection Preview */}
+                      <div 
+                        className="flex items-center space-x-1 px-2 py-1 bg-surface rounded border border-gray-600"
+                        data-testid="pre-map-preview"
+                      >
+                        {(() => {
+                          const selectedIcon = ICON_OPTIONS.find(opt => opt.id === defaultIcon);
+                          const IconComponent = selectedIcon?.icon || ICON_OPTIONS[0].icon;
+                          return <IconComponent className="h-4 w-4" style={{ color: defaultColor }} />;
+                        })()}
+                        <div 
+                          className="w-4 h-4 rounded-full border border-gray-500"
+                          style={{ backgroundColor: defaultColor }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-on-surface-variant mb-2">
+                    New properties will use this icon and color by default
+                  </p>
+
+                  {/* Icon Picker Panel */}
+                  {showIconPicker && (
+                    <div className="grid grid-cols-3 gap-1 p-2 bg-gray-800 rounded border border-gray-600 mt-2">
+                      {ICON_OPTIONS.map((iconOption) => {
+                        const IconComponent = iconOption.icon;
+                        const isSelected = defaultIcon === iconOption.id;
+                        return (
+                          <button
+                            key={iconOption.id}
+                            onClick={() => {
+                              onDefaultIconChange(iconOption.id);
+                              setShowIconPicker(false);
+                            }}
+                            className={`p-2 rounded border text-center transition-colors ${
+                              isSelected
+                                ? "bg-primary text-white border-primary"
+                                : "bg-gray-700 border-gray-600 hover:bg-gray-600 text-gray-200"
+                            }`}
+                            data-testid={`pre-map-icon-option-${iconOption.id}`}
+                          >
+                            <IconComponent className="h-4 w-4 mx-auto" />
+                            <div className="text-xs mt-1">{iconOption.name}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Color Picker Panel */}
+                  {showColorPicker && (
+                    <div className="flex gap-1 p-2 bg-gray-800 rounded flex-wrap border border-gray-600 mt-2">
+                      {COLOR_OPTIONS.map((colorOption) => {
+                        const isSelected = defaultColor === colorOption.value;
+                        return (
+                          <button
+                            key={colorOption.id}
+                            onClick={() => {
+                              onDefaultColorChange(colorOption.value);
+                              setShowColorPicker(false);
+                            }}
+                            className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${
+                              isSelected ? "ring-2 ring-white ring-offset-2 ring-offset-gray-800" : "border-2 border-gray-500"
+                            }`}
+                            style={{ backgroundColor: colorOption.value }}
+                            title={colorOption.name}
+                            data-testid={`pre-map-color-option-${colorOption.id}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 
                 {/* Two-column layout for batch input methods */}

@@ -1,0 +1,37 @@
+> Project: Geocode App (deployed on Vercel; GitHub + Replit workflow).
+> Branch: `feature/fix-quirks`.
+>
+> **Goal:** Add a “Pre-Mapping Icon & Color Selection” feature that lets the user choose a default icon and color *before* clicking **Process**.
+>
+> **Behavioral requirements**
+>
+> * By default, the pre-mapping selection is the current standard: **blue circle**.
+> * The user may optionally choose a **different icon** and/or **color** before processing.
+> * When **Process** runs, all newly mapped points use that selected default.
+> * If the user does *not* choose a custom option, the system uses the default blue circle.
+> * When the process is complete, the selection resets to the default (blue circle) for the next batch.
+> * This logic must apply correctly whether **Add to Map** is **ON or OFF**:
+>
+>   * If OFF → map clears, new points display using the chosen default.
+>   * If ON → existing points remain unchanged; new points are added with the new icon/color.
+>
+> **Formatting & consistency requirements**
+>
+> * The visual style and toolbar functionality for icons/colors in the map popup must remain unchanged.
+> * Icon rendering, scaling, and quality must match existing point icons.
+> * When the map is expanded, **all points must retain their assigned icon and color** (no reversion to default).
+> * Preserve all prior improvements: icon clarity, polygon selection behavior, and selection highlighting.
+>
+> **Implementation guidance**
+>
+> * Introduce the pre-mapping control within the same UI section where users paste or upload geocodes (above or beside the “Process” button).
+> * The control can reuse the same icon/color picker logic already used in the popup toolbar for visual consistency.
+> * The pre-selected icon/color should be applied programmatically when points are first created and added to the map.
+>
+> **Acceptance tests**
+>
+> 1. Default remains blue circle if no change is made.
+> 2. Changing icon/color before processing correctly applies that choice to new points.
+> 3. “Add to Map” ON → existing points unchanged, new batch reflects new selection.
+> 4. “Add to Map” OFF → map clears, new batch reflects new selection.
+> 5. Expanded map view retains all icon and color formatting.
