@@ -1337,6 +1337,9 @@ export const PropertyMap = memo(function PropertyMap({
   onRegisterStartPolygonDrawing,
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
+  
+  // Refs for marker instances to control popup behavior
+  const markerRefs = useRef<Map<string, L.Marker>>(new Map());
 
   // Marker formatting state - stores custom icon, color, and note per geocode
   // Initialize from localStorage to persist across map size toggles and page reloads
@@ -1754,10 +1757,34 @@ export const PropertyMap = memo(function PropertyMap({
                   <Marker
                     position={[property.lat, property.lng]}
                     icon={markerIcon}
+                    ref={(ref) => {
+                      if (ref) {
+                        markerRefs.current.set(property.geocode, ref);
+                      } else {
+                        // Clean up ref when marker unmounts to prevent memory leaks
+                        markerRefs.current.delete(property.geocode);
+                      }
+                    }}
                     eventHandlers={{
-                      click: () => {
+                      click: (e) => {
+                        // Left-click: select only, do not open popup
                         if (onMarkerClick) {
                           onMarkerClick(property.geocode);
+                        }
+                        // Close popup immediately if it was auto-opened
+                        const marker = markerRefs.current.get(property.geocode);
+                        // Guard against stale references by checking if marker is still mounted
+                        if (marker && (marker as any)._map) {
+                          marker.closePopup();
+                        }
+                      },
+                      contextmenu: (e) => {
+                        // Right-click: open popup
+                        e.originalEvent.preventDefault();
+                        const marker = markerRefs.current.get(property.geocode);
+                        // Guard against stale references by checking if marker is still mounted
+                        if (marker && (marker as any)._map) {
+                          marker.openPopup();
                         }
                       },
                     }}
