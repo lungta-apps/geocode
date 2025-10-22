@@ -21,7 +21,7 @@ import {
   Plus,
   Minus,
   Circle,
-  Map,
+  Map as MapIcon,
   Trash2,
   Palette,
   Tag,
@@ -1172,7 +1172,7 @@ function BasemapSelector({
           data-testid="button-basemap-selector"
           size="sm"
         >
-          <Map className="h-4 w-4" />
+          <MapIcon className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -1337,7 +1337,7 @@ export const PropertyMap = memo(function PropertyMap({
   onRegisterStartPolygonDrawing,
 }: PropertyMapProps) {
   const mapRef = useRef<L.Map | null>(null);
-  
+
   // Refs for marker instances to control popup behavior
   const markerRefs = useRef<Map<string, L.Marker>>(new Map());
 
