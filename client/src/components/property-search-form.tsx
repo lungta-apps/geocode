@@ -383,7 +383,6 @@ export function PropertySearchForm({
       const newBatchId = `batch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       setActiveBatchId(newBatchId);
       setShowProgressTracker(true);
-
       batchMutation.mutate(geocodes);
     } catch (error) {
       const errorMessage =

@@ -1273,7 +1273,10 @@ const MARKER_FORMATS_STORAGE_KEY = "map-marker-formats";
 const MAP_LABELS_STORAGE_KEY = "map-labels";
 
 // Helper to load marker formats from localStorage - exported for external use
-export const loadMarkerFormatsFromStorage = (): Record<string, MarkerFormat> => {
+export const loadMarkerFormatsFromStorage = (): Record<
+  string,
+  MarkerFormat
+> => {
   if (typeof window === "undefined") return {};
 
   try {
@@ -1288,7 +1291,9 @@ export const loadMarkerFormatsFromStorage = (): Record<string, MarkerFormat> => 
 };
 
 // Helper to save marker formats to localStorage - exported for external use
-export const saveMarkerFormatsToStorage = (formats: Record<string, MarkerFormat>) => {
+export const saveMarkerFormatsToStorage = (
+  formats: Record<string, MarkerFormat>,
+) => {
   if (typeof window === "undefined") return;
 
   try {
@@ -1302,13 +1307,13 @@ export const saveMarkerFormatsToStorage = (formats: Record<string, MarkerFormat>
 export const applyDefaultFormatsToProperties = (
   geocodes: string[],
   defaultIcon: string,
-  defaultColor: string
+  defaultColor: string,
 ) => {
   if (typeof window === "undefined") return;
-  
+
   const existingFormats = loadMarkerFormatsFromStorage();
   let needsUpdate = false;
-  
+
   geocodes.forEach((geocode) => {
     // Only apply defaults if no format exists for this geocode
     if (!existingFormats[geocode]) {
@@ -1319,7 +1324,7 @@ export const applyDefaultFormatsToProperties = (
       needsUpdate = true;
     }
   });
-  
+
   if (needsUpdate) {
     saveMarkerFormatsToStorage(existingFormats);
   }
@@ -1380,6 +1385,25 @@ export const PropertyMap = memo(function PropertyMap({
   useEffect(() => {
     saveMarkerFormatsToStorage(markerFormats);
   }, [markerFormats]);
+
+  // Re-sync newly added properties with saved formats from localStorage
+  useEffect(() => {
+    const saved = loadMarkerFormatsFromStorage();
+    const toMerge = properties
+      .map((p) => p.geocode)
+      .filter((gc) => saved[gc] && !markerFormats[gc]);
+
+    if (toMerge.length > 0) {
+      setMarkerFormats((prev) => {
+        const updated = { ...prev };
+        toMerge.forEach((gc) => {
+          updated[gc] = saved[gc];
+        });
+        saveMarkerFormatsToStorage(updated);
+        return updated;
+      });
+    }
+  }, [properties]);
 
   // Map labels state - stores draggable text annotations
   const [mapLabels, setMapLabels] = useState<MapLabel[]>(() => {
