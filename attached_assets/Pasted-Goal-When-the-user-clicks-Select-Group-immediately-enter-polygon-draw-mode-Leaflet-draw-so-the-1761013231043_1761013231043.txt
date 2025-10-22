@@ -1,0 +1,83 @@
+Goal
+When the user clicks “Select Group”, immediately enter polygon draw mode (Leaflet-draw) so they can start drawing the selection right away. Remove the on-map toolbar and its buttons (polygon, circle, edit, trash). Keep “Exit Selection” as the way to leave selection mode. No zoom/pan changes. Works in original and expanded map states.
+
+Implementation
+
+Remove the on-map toolbar UI
+
+Delete the rendered toolbar component and its buttons (polygon, circle, edit/pencil, trash) from the map.
+
+If there’s a DrawingControl component that renders these buttons, remove its visible controls (or remove the component entirely if not needed).
+
+Delete any related imports, CSS, and dead handlers that only served those buttons.
+
+Auto-start polygon draw when selection mode turns on
+
+In property-map.tsx (or the map component that owns Leaflet instance and selection logic):
+
+When isSelectionMode becomes true (i.e., user clicked Select Group), programmatically enable the polygon tool:
+
+// Pseudocode to implement:
+// const map = mapRef.current;
+// drawPolygonRef.current = new L.Draw.Polygon(map, { /* keep your existing style options */ });
+// drawPolygonRef.current.enable();
+
+Do not start circle mode and do not render any UI for it.
+
+Handle polygon completion and selection callback
+
+Keep (or add) the existing draw:created listener that:
+
+Gets the polygon geometry,
+
+Computes which properties fall inside,
+
+Calls the existing onPropertySelection(geocodes: string[]) callback to update group selection.
+
+After draw:created, do not auto-zoom or pan.
+
+Cancel/exit behavior
+
+“Exit Selection” should:
+
+Disable any active drawing state (drawPolygonRef.current?.disable()),
+
+Clear the temporary drawn shape only if that was the previous behavior,
+
+Close group selection mode (setIsSelectionMode(false)), as it already does.
+
+The Esc key may cancel the active draw sketch, but must not exit selection mode unless the app already does that intentionally.
+
+Both map states
+
+Ensure the same behavior (auto-start polygon, no toolbar) works in original and expanded map views. If there are two map instances/keys, apply the same logic in both.
+
+No regressions
+
+Keep all current color/highlight rules (selected icons + polygons turn orange).
+
+Group selection results and formatting toolbar behavior (outside the map toolbar) remain unchanged.
+
+Do not introduce zoom/pan on entering or exiting selection mode.
+
+Acceptance Criteria
+
+Clicking Select Group immediately lets the user draw a polygon (no toolbar appears).
+
+Circle, edit/pencil, and trash buttons are gone.
+
+Completing the polygon selects the correct properties and highlights them (icons + parcels) in orange.
+
+Exit Selection stops drawing and exits selection mode; no zoom/pan occurs.
+
+Works identically in original and expanded map states.
+
+No dead imports/handlers left from the removed toolbar.
+
+Summary Output
+
+List of files/lines changed.
+
+Confirmation that the toolbar code and its buttons were removed.
+
+Confirmation that polygon mode auto-starts on Select Group in both map states and selection behaves as before (minus the toolbar).

@@ -1,0 +1,37 @@
+Feature: Batch format selected markers (group edit)
+
+Context:
+- The app already has a “Select Group” mode with polygon/circle tools and shows an edit (pencil) icon on the map UI (currently unused).
+- We want the same formatting options as a single marker (Icon, Color, Note, Create Label) applied to ALL currently-selected markers.
+
+Requirements:
+- When group-selection is active AND at least 1 marker is selected, clicking the edit (pencil) button opens a compact **Group Toolbar** (similar to the single-marker popup toolbar) anchored near the button.
+- Toolbar actions:
+  1) **Icon picker** → choose a Lucide icon; apply to all selected markers.
+  2) **Color picker** → choose a swatch; apply to all selected markers.
+  3) **Note** → open a small textarea; on save, set each selected marker’s `note` to the same text.
+  4) **Create Label** → create ONE draggable map label representing the group, placed at the centroid of the selected markers (avg lat/lng). Persist this label like single labels.
+- Use the same central store/state as markers already use. Do not create a separate, fragile copy.
+  - Add/ensure fields on marker objects: `{ icon, color, note }`.
+  - Update markers in a single batched action to avoid flicker.
+- Persistence:
+  - Keep existing localStorage persistence so formatting survives map expand/collapse and reload.
+  - Ensure rehydrate/merge logic keeps custom fields intact.
+- UX details:
+  - The Group Toolbar is visible only when selection count > 0 and select mode is on.
+  - Show a small “N selected” indicator in the toolbar header.
+  - Provide **Apply** and **Cancel** for Note; Icon/Color apply immediately on click.
+  - ESC closes the toolbar; selection remains intact.
+- Styling:
+  - Match dark theme; reuse existing toolbar styles/components where possible.
+- Code quality:
+  - Keep ESM imports; include .js extensions in relative imports.
+  - Do NOT modify backend or package.json scripts.
+  - Summarize changed files and the state APIs touched (e.g., `setMarkers`, selectors).
+
+Testing I will do:
+- Enter Select Group mode, lasso several markers, click the edit (pencil) button.
+- Change icon → all selected update.
+- Change color → all selected update.
+- Add Note → all selected have the same note; persists after map toggle/reload.
+- Create Label → one draggable group label at centroid; persists like single labels.

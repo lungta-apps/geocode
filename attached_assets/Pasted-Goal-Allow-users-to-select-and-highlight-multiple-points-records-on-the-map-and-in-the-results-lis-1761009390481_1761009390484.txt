@@ -1,0 +1,93 @@
+Goal:
+Allow users to select and highlight multiple points/records on the map and in the results list.
+
+Clicking a record or map point adds it to the current highlighted set (instead of replacing the existing one).
+
+Clicking a highlighted record or map point removes it from the highlighted set.
+
+Works both ways: clicking on a map icon highlights the corresponding record in the list, and clicking a record highlights the corresponding icon and parcel on the map.
+
+Must function in both the original map state and the expanded map state.
+
+Implementation Details
+
+Selection State
+
+Replace the current single selection variable (e.g., selectedGeocode) with an array (e.g., selectedGeocodes: string[]).
+
+All highlight logic should reference membership in this array.
+
+Example:
+const isSelected = selectedGeocodes.includes(property.geocode);
+
+Support toggling:
+
+If the clicked record/geocode is not in the array → add it.
+
+If it is already in the array → remove it.
+
+Map Click Behavior
+
+Clicking a marker should toggle that marker’s geocode in selectedGeocodes.
+
+The corresponding polygon and record in the list should update immediately.
+
+Reuse existing handlers (no new independent states).
+
+List Click Behavior
+
+Clicking a record in the results list should also toggle its geocode in selectedGeocodes.
+
+The corresponding map marker and polygon should highlight or unhighlight accordingly.
+
+Highlighting Rules
+
+Selected points: orange marker + orange parcel polygon (using SELECTED_COLOR).
+
+Non-selected points: keep their default color/icon.
+
+Group selections and individual selections should all rely on the same selectedGeocodes array.
+
+Dimming and opacity logic must continue to work with multiple selected properties.
+
+Both Map States
+
+Ensure this toggle selection system works in original and expanded map views.
+
+Both versions of the results list (since formatting differs) must respond to selection state changes.
+
+Switching between map states must preserve the current multi-selection highlights.
+
+Exit Selection
+
+The “Exit Selection” button should clear all highlights (selectedGeocodes = []) across both views.
+
+No Regressions
+
+Group-selection tools (lasso/rectangle) must still work and populate selectedGeocodes correctly.
+
+The red X button removal and other toolbar behaviors should remain unchanged.
+
+Acceptance Criteria
+
+User can click multiple records or map points to highlight several at once.
+
+Clicking a highlighted one again removes it from the selection.
+
+Highlights stay in sync between map and list.
+
+Works seamlessly in both original and expanded map states.
+
+“Exit Selection” clears everything.
+
+No broken or duplicate icons, and parcel polygons always match highlight color.
+
+Summary Output
+
+Files and lines changed.
+
+Confirmation that selectedGeocode was refactored into an array (selectedGeocodes).
+
+Confirmation that clicking points/records toggles highlights in both map states.
+
+Confirmation that the rest of the map and toolbar behavior remains unchanged.

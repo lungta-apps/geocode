@@ -1,0 +1,64 @@
+**Goal:**  
+When the user clicks a map marker, the corresponding record in the lookup results list highlights—exactly the same as when clicking a record in the list—**in both** the default (original) map layout **and** the expanded map layout.
+
+**Requirements:**
+
+1. **Two-way selection sync**
+  
+  - List → Map already works. Add Map → List: clicking a marker updates the same selection state (e.g., `selectedGeocode`) used by list clicks.
+    
+  - Only one selected record at a time.
+    
+2. **Both map states**
+  
+  - Ensure the behavior works in:
+    
+    - **Original map state** (standard layout/compact list).
+      
+    - **Expanded map state** (full/expanded map where the list renders with different DOM/formatting).
+      
+  - If the list DOM differs between states, use a shared selection state (React state/Context) so both list variants react identically to selection changes.
+    
+3. **Scope & wiring**
+  
+  - Add `onClick` (or equivalent) to Leaflet `Marker` so it calls the same selection handler as list clicks.
+    
+  - If selection is managed in a parent, bubble up via an `onMapMarkerSelect(geocode: string)` prop and reuse the **existing** list-highlight logic.
+    
+  - Do **not** introduce a second selection variable.
+    
+4. **Visual behavior**
+  
+  - Clicking a marker:
+    
+    - Highlights that marker (orange) and its parcel (orange) as it does now.
+      
+    - Highlights the corresponding list row (in both map states).
+      
+  - Clicking “Exit Selection” clears selection in the map **and** the list in both states.
+    
+5. **No regressions**
+  
+  - Group selection behavior remains unchanged.
+    
+  - No duplicate markers, no unintended zoom/pan changes.
+    
+
+**Acceptance Criteria:**
+
+- In **original** map state: Marker click highlights the correct list row.
+  
+- In **expanded** map state: Marker click highlights the correct list row using that layout’s styling.
+  
+- Switching between states preserves which record is selected and keeps the list highlight in sync.
+  
+- One source of truth for selection (e.g., `selectedGeocode`).
+  
+
+**Summary Output:**
+
+- Files/lines changed.
+  
+- Where the selection handler is defined and how both list renderings subscribe to it.
+  
+- Confirmation that marker click highlights the list in **both** map states and that “Exit Selection” clears both.

@@ -6,8 +6,13 @@
     "esModuleInterop": true,
     "strict": true,
     "baseUrl": ".",
+    "paths": {
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"],
+      "@assets/*": ["./attached_assets/*"]
+    },
     "types": ["node"]
   },
-  "include": ["api/**/*.js", "shared", "client", "vite.config.ts"],
-  "exclude": ["server", "api/**/*.ts"]
+  "include": ["api/**/*.js", "shared", "client", "server", "vite.config.ts"],
+  "exclude": ["api/**/*.ts"]
 }

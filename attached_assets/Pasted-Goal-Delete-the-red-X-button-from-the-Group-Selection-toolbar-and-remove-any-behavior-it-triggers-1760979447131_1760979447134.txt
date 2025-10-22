@@ -1,0 +1,64 @@
+Goal:
+Delete the red “X” button from the Group Selection toolbar and remove any behavior it triggers. The Exit Selection button remains the only way to end selection. The pencil/edit button must remain visible and functional while a selection exists.
+
+Edits to make (apply to the whole repo):
+
+Remove UI for the red X
+
+In the Group Toolbar JSX (e.g., property-map.tsx, GroupToolbar.tsx, or similar):
+
+Delete the <button> (or component) that renders the red close/dismiss action.
+
+If actions are driven by an array/config, remove the entry with role/name "close" | "dismiss" | "clear".
+
+Remove any conditional that inserts an X icon in group mode.
+
+Remove imports / aliases of the X icon
+
+From lucide-react, delete all X-type imports used by the toolbar: X, XCircle, XOctagon, Close, Times (any alias).
+
+Delete any local IconX wrapper/component if it is only used for this button.
+
+Disable the red X behavior everywhere
+
+Find and delete any handler invoked by that button in group mode:
+
+Examples: handleCloseGroupToolbar, onCloseGroup, hideEditPanel, setShowEditPanel(false), setShowEditTools(false).
+
+Remove only the binding to the button; keep the generic functions if they’re used elsewhere.
+
+Ensure no keyboard shortcut (e.g., Escape) calls those same handlers for group mode. Escape should not clear or exit selection unless it routes through Exit Selection.
+
+Keep selection + pencil visible during selection
+
+While selectedIds.length > 0 (or your equivalent), the pencil/edit control stays visible.
+
+Do not change any selection state in this change set (do not call setSelectedIds([]) or exit mode).
+
+Do not trigger map.setView, map.flyTo, or any zoom when showing/hiding the edit tools.
+
+Style/layout cleanup
+
+Remove any CSS/variants specifically styling the red X in the toolbar (e.g., .btn--danger, .toolbar__close used only for this).
+
+Ensure spacing/alignment is correct after the button removal (no orphaned gaps).
+
+Acceptance criteria (verify manually):
+
+When multiple points are selected: toolbar shows Exit Selection and pencil/edit; no red X appears.
+
+Clicking Exit Selection ends selection as before.
+
+Clicking the pencil/edit still opens edit controls and applies formatting.
+
+No action anywhere hides the pencil/edit without ending selection.
+
+Selection is never cleared by any leftover “close/dismiss” code.
+
+No zoom or pan occurs due to toolbar visibility changes.
+
+Output to return:
+
+List of files/lines changed (or a short diff).
+
+Confirmation that “red X” is gone, no click/keyboard path triggers its old behavior, and selection + pencil work as specified.
